@@ -44,6 +44,32 @@ p{margin:0}
 .muted{color:var(--muted)} .small{font-size:.86rem}
 header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px 24px}
 header p{color:var(--muted);margin-top:4px;max-width:60ch}
+.nuri-wrap{position:relative}
+.nuri-btn{display:inline-flex;align-items:center;gap:8px;border:1.5px solid var(--k-area);background:var(--surface);color:var(--k-area);border-radius:10px;padding:8px 14px;font:inherit;font-size:.93rem;font-weight:600;cursor:pointer}
+.nuri-btn[aria-expanded="true"]{background:var(--k-area);color:var(--k-ink)}
+.nuri-panel{position:absolute;right:0;top:calc(100% + 8px);z-index:50;width:min(600px,calc(100vw - 32px));max-height:min(72vh,640px);display:flex;flex-direction:column;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:0 16px 40px rgba(20,30,30,.18)}
+.nuri-top{display:flex;gap:8px;align-items:flex-start}
+.nuri-tabs{display:flex;flex-wrap:wrap;gap:5px;flex:1}
+.nuri-tabs button{border:1.5px solid var(--k-area);background:transparent;color:var(--k-area);border-radius:999px;padding:3px 11px;font:inherit;font-size:.84rem;font-weight:600;cursor:pointer}
+.nuri-tabs button[aria-selected="true"]{background:var(--k-area);color:var(--k-ink)}
+#nuriSearch{font:inherit;font-size:.92rem;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+.nuri-body{overflow:auto;min-height:0;display:flex;flex-direction:column;gap:12px;padding-right:4px}
+.nuri-goal{font-size:.86rem;color:var(--muted);margin:0}
+.nuri-goal b{color:var(--ink);font-weight:600}
+.nuri-cat{display:grid;grid-template-columns:8.5em minmax(0,1fr);gap:4px 12px;border-top:1px solid var(--line);padding-top:10px}
+.nuri-cat h4{margin:0;font-size:.9rem;color:var(--k-area);font-weight:700;line-height:1.5}
+.nuri-cat h4 small{display:block;font-weight:500;color:var(--muted);font-size:.76rem}
+.nuri-cat ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:3px;font-size:.9rem;line-height:1.55}
+.nuri-cat li::before{content:"·";color:var(--k-area);font-weight:700;margin-right:6px}
+.nuri-cat mark{background:color-mix(in srgb,var(--k-area) 22%,transparent);color:inherit;border-radius:3px}
+.nuri-src{margin:0;font-size:.76rem;color:var(--muted)}
+@media (max-width:560px){.nuri-cat{grid-template-columns:minmax(0,1fr)}.nuri-panel{position:fixed;left:16px;right:16px;top:72px;width:auto}}
+.near-list{margin:6px 0 0;padding:0;list-style:none;display:grid;gap:4px}
+.near-list li{display:grid;grid-template-columns:9.5em minmax(0,1fr);gap:2px 10px;padding:5px 8px;border-radius:7px;background:color-mix(in srgb,var(--k-area) 9%,var(--surface));border-left:3px solid var(--k-area)}
+.near-list li b{color:var(--k-area);font-weight:600;font-size:.84rem}
+.near-list li span{color:var(--ink)}
+.near-open{border:0;background:none;color:var(--k-area);font:inherit;font-size:.84rem;font-weight:600;cursor:pointer;padding:4px 0;text-decoration:underline;text-underline-offset:3px}
+@media (max-width:560px){.near-list li{grid-template-columns:minmax(0,1fr)}}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
 .seg button{border:0;background:transparent;color:var(--ink);padding:6px 12px;font:inherit;font-size:.9rem;cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
@@ -153,6 +179,21 @@ footer{color:var(--muted);font-size:.8rem;border-top:1px solid var(--line);paddi
       <h1>유아발달상황 작성 도우미</h1>
       <p>초고를 쓰면 문장구성 블록으로 나눠 줍니다. 블록을 누르면 메모 원문이 보이고, 빈 블록만 채우면 문장이 완성됩니다.</p>
     </div>
+    <div class="nuri-wrap" id="nuriWrap">
+      <button type="button" class="nuri-btn" id="nuriBtn" aria-expanded="false" aria-controls="nuriPanel">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 5.5C4 4.7 4.7 4 5.5 4H11v15H5.5A1.5 1.5 0 0 1 4 17.5zM20 5.5c0-.8-.7-1.5-1.5-1.5H13v15h5.5c.8 0 1.5-.7 1.5-1.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        누리과정 참고
+      </button>
+      <div class="nuri-panel" id="nuriPanel" role="dialog" aria-label="2019 개정 누리과정 5개 영역 내용" hidden>
+        <div class="nuri-top">
+          <div class="nuri-tabs" id="nuriTabs" role="tablist"></div>
+          <button type="button" class="btn ghost" id="nuriClose" aria-label="닫기">닫기</button>
+        </div>
+        <input type="search" id="nuriSearch" placeholder="낱말로 찾기 (예: 친구, 규칙, 계절)" aria-label="누리과정 내용 찾기" autocomplete="off">
+        <div class="nuri-body" id="nuriBody"></div>
+        <p class="nuri-src">2019 개정 누리과정 고시문 · 5개 영역 59개 내용. 내용은 성취 기준이 아니라 유아의 경험을 이해하는 기준입니다.</p>
+      </div>
+    </div>
   </header>
 
   <div class="classbar" id="classbar" aria-label="우리 반"></div>
@@ -255,7 +296,7 @@ const NURI=`[5개 영역 내용]
 의사소통: 말이나 이야기를 관심 있게 듣는다 / 자신의 경험, 느낌, 생각을 말한다 / 상황에 적절한 단어를 사용하여 말한다 / 상대방이 하는 이야기를 듣고 관련해서 말한다 / 바른 태도로 듣고 말한다 / 고운 말을 사용한다 / 말과 글의 관계에 관심을 가진다 / 주변의 상징, 글자 등의 읽기에 관심을 가진다 / 자신의 생각을 글자와 비슷한 형태로 표현한다 / 책에 관심을 가지고 상상하기를 즐긴다 / 동화, 동시에서 말의 재미를 느낀다 / 말놀이와 이야기 짓기를 즐긴다
 사회관계: 나를 알고 소중히 여긴다 / 나의 감정을 알고 상황에 맞게 표현한다 / 내가 할 수 있는 것을 스스로 한다 / 가족의 의미를 알고 화목하게 지낸다 / 친구와 서로 도우며 사이좋게 지낸다 / 친구와의 갈등을 긍정적인 방법으로 해결한다 / 서로 다른 감정, 생각, 행동을 존중한다 / 친구와 어른께 예의 바르게 행동한다 / 약속과 규칙의 필요성을 알고 지킨다 / 내가 살고 있는 곳에 대해 궁금한 것을 알아본다 / 우리나라에 대해 자부심을 가진다 / 다양한 문화에 관심을 가진다
 예술경험: 자연과 생활에서 아름다움을 느끼고 즐긴다 / 예술적 요소에 관심을 갖고 찾아본다 / 노래를 즐겨 부른다 / 신체, 사물, 악기로 간단한 소리와 리듬을 만들어 본다 / 신체나 도구를 활용하여 움직임과 춤으로 자유롭게 표현한다 / 다양한 미술 재료와 도구로 자신의 생각과 느낌을 표현한다 / 극놀이로 경험이나 이야기를 표현한다 / 다양한 예술을 감상하며 상상하기를 즐긴다 / 서로 다른 예술 표현을 존중한다 / 우리나라 전통 예술에 관심을 갖고 친숙해진다
-자연탐구: 주변 세계와 자연에 대해 지속적으로 호기심을 가진다 / 궁금한 것을 탐구하는 과정에 즐겁게 참여한다 / 탐구과정에서 서로 다른 생각에 관심을 가진다 / 물체의 특성과 변화를 여러 가지 방법으로 탐색한다 / 물체를 세어 수량을 알아본다 / 물체의 위치와 방향, 모양을 알고 구별한다 / 일상에서 길이, 무게 등의 속성을 비교한다 / 주변에서 반복되는 규칙을 찾는다 / 일상에서 모은 자료를 기준에 따라 분류한다 / 도구와 기계에 대해 궁금한 것을 알아본다 / 주변의 동식물에 관심을 가진다 / 생명과 자연환경을 소중히 여긴다 / 날씨와 계절의 변화를 생활과 관련짓는다
+자연탐구: 주변 세계와 자연에 대해 지속적으로 호기심을 가진다 / 궁금한 것을 탐구하는 과정에 즐겁게 참여한다 / 탐구과정에서 서로 다른 생각에 관심을 가진다 / 물체의 특성과 변화를 여러 가지 방법으로 탐색한다 / 물체를 세어 수량을 알아본다 / 물체의 위치와 방향, 모양을 알고 구별한다 / 일상에서 길이, 무게 등의 속성을 비교한다 / 주변에서 반복되는 규칙을 찾는다 / 일상에서 모은 자료를 기준에 따라 분류한다 / 도구와 기계에 대해 관심을 가진다 / 주변의 동식물에 관심을 가진다 / 생명과 자연환경을 소중히 여긴다 / 날씨와 계절의 변화를 생활과 관련짓는다
 [추구하는 인간상]
 - 건강한 사람: 자신의 소중함을 알고, 건강하고 안전한 생활 습관을 기르는
 - 자주적인 사람: 자신의 일을 스스로 해결하는 기초능력 있는
@@ -282,6 +323,45 @@ function humanRef(r){
   return `<div class="hum-head">인간상 ← 이 문장의 관찰이 실제로 보여 주는 모습이 있을 때만 맺음으로 이어 주세요.</div><ul class="hum">`+
     hs.map(h=>{const near=top>0&&h.hits.length===top;
       return `<li class="${near?"near":""}"><b>${h.name}</b><span>${h.desc}</span>${near?`<em>이 문장에 ${h.hits.slice(0,3).map(esc).join(", ")}</em>`:""}</li>`}).join("")+`</ul>`;
+}
+/* 2019 개정 누리과정 5개 영역: 목표, 내용범주, 내용 (고시문 리플릿)
+   내용마다 [문장, 그 내용을 떠올리게 하는 관찰 낱말] */
+const N=(t,re)=>({t,re});
+const NURI_DATA=[
+ {area:"신체운동·건강",goal:"실내외에서 신체활동을 즐기고, 건강하고 안전한 생활을 한다.",cats:[
+  {cat:"신체활동 즐기기",items:[N("신체를 인식하고 움직인다.",/(신체 부위|몸의|팔|다리|손가락)/),N("신체 움직임을 조절한다.",/(조절|균형|빠르기|천천히|멈추)/),N("기초적인 이동운동, 제자리 운동, 도구를 이용한 운동을 한다.",/(달리|뛰|던지|굴리|줄넘기|공을|공으로|매달|오르|걷|기어|훌라후프)/),N("실내외 신체활동에 자발적으로 참여한다.",/(신체활동|체육|놀이터|바깥놀이에서 뛰|몸을 움직)/)]},
+  {cat:"건강하게 생활하기",items:[N("자신의 몸과 주변을 깨끗이 한다.",/(손을 씻|손 씻|양치|이를 닦|깨끗|코를 풀)/),N("몸에 좋은 음식에 관심을 가지고 바른 태도로 즐겁게 먹는다.",/(먹|음식|급식|간식|편식|골고루|수저)/),N("하루 일과에서 적당한 휴식을 취한다.",/(휴식|쉬|낮잠|누워)/),N("질병을 예방하는 방법을 알고 실천한다.",/(질병|감기|기침|마스크|예방)/)]},
+  {cat:"안전하게 생활하기",items:[N("일상에서 안전하게 놀이하고 생활한다.",/(안전|조심|위험)/),N("TV, 컴퓨터, 스마트폰 등을 바르게 사용한다.",/(TV|컴퓨터|스마트폰|태블릿|영상)/),N("교통안전 규칙을 지킨다.",/(교통|횡단보도|신호등|자동차를 조심)/),N("안전사고, 화재, 재난, 학대, 유괴 등에 대처하는 방법을 경험한다.",/(화재|대피|재난|지진|학대|유괴|소방)/)]}]},
+ {area:"의사소통",goal:"일상생활에 필요한 의사소통 능력과 상상력을 기른다.",cats:[
+  {cat:"듣기와 말하기",items:[N("말이나 이야기를 관심 있게 듣는다.",/(듣|경청|귀 기울)/),N("자신의 경험, 느낌, 생각을 말한다.",/(라고 말|다고 말|말하며|말함|이야기하|설명)/),N("상황에 적절한 단어를 사용하여 말한다.",/(단어|낱말|안내방송|방송)/),N("상대방이 하는 이야기를 듣고 관련해서 말한다.",/(대답|질문|되물|이어서 말)/),N("바른 태도로 듣고 말한다.",/(바른 태도|차례로 말|손을 들)/),N("고운 말을 사용한다.",/(고운 말|존댓말|고맙|미안)/)]},
+  {cat:"읽기와 쓰기에 관심 가지기",items:[N("말과 글의 관계에 관심을 가진다.",/(말과 글|글자에 관심)/),N("주변의 상징, 글자 등의 읽기에 관심을 가진다.",/(상징|표지|간판|글자를 읽|읽어)/),N("자신의 생각을 글자와 비슷한 형태로 표현한다.",/(쓰고|썼|쓰며|쓰는|편지|이름을 쓰|끼적)/)]},
+  {cat:"책과 이야기 즐기기",items:[N("책에 관심을 가지고 상상하기를 즐긴다.",/(책|그림책|상상)/),N("동화, 동시에서 말의 재미를 느낀다.",/(동화|동시|말의 재미)/),N("말놀이와 이야기 짓기를 즐긴다.",/(말놀이|이야기 짓|끝말잇기|이야기를 만들)/)]}]},
+ {area:"사회관계",goal:"자신을 존중하고 더불어 생활하는 태도를 가진다.",cats:[
+  {cat:"나를 알고 존중하기",items:[N("나를 알고 소중히 여긴다.",/(소중|나를|내 몸)/),N("나의 감정을 알고 상황에 맞게 표현한다.",/(감정|기분|화가|속상|슬프|기뻐|울)/),N("내가 할 수 있는 것을 스스로 한다.",/(스스로|혼자|직접 하|정리)/)]},
+  {cat:"더불어 생활하기",items:[N("가족의 의미를 알고 화목하게 지낸다.",/(가족|엄마|아빠|동생|형|언니)/),N("친구와 서로 도우며 사이좋게 지낸다.",/(도와|도움을 주|사이좋|함께 놀|같이 놀)/),N("친구와의 갈등을 긍정적인 방법으로 해결한다.",/(갈등|다툼|싸우|양보|차례|겹치)/),N("서로 다른 감정, 생각, 행동을 존중한다.",/(다른 생각|존중|의견)/),N("친구와 어른께 예의 바르게 행동한다.",/(예의|인사|어른)/),N("약속과 규칙의 필요성을 알고 지킨다.",/(약속|규칙을 지|규칙을 정)/)]},
+  {cat:"사회에 관심 가지기",items:[N("내가 살고 있는 곳에 대해 궁금한 것을 알아본다.",/(동네|마을|직업|일하는|가게|소방관|경찰)/),N("우리나라에 대해 자부심을 가진다.",/(우리나라|태극기|한글|독도)/),N("다양한 문화에 관심을 가진다.",/(문화|다른 나라|세계|외국)/)]}]},
+ {area:"예술경험",goal:"아름다움과 예술에 관심을 가지고 창의적 표현을 즐긴다.",cats:[
+  {cat:"아름다움 찾아보기",items:[N("자연과 생활에서 아름다움을 느끼고 즐긴다.",/(아름다|예쁘|느끼며|하늘|햇살|노을|꽃)/),N("예술적 요소에 관심을 갖고 찾아본다.",/(색깔|색을|모양을 찾|선을|질감|무늬)/)]},
+  {cat:"창의적으로 표현하기",items:[N("노래를 즐겨 부른다.",/(노래)/),N("신체, 사물, 악기로 간단한 소리와 리듬을 만들어 본다.",/(소리|리듬|악기|두드|박자)/),N("신체나 도구를 활용하여 움직임과 춤으로 자유롭게 표현한다.",/(춤|몸으로 표현|움직임을 바꾸|흔들)/),N("다양한 미술 재료와 도구로 자신의 생각과 느낌을 표현한다.",/(그리|그림|미술|재료|만들|꾸미|붙이|낙엽을 이용|색종이|점토|오리)/),N("극놀이로 경험이나 이야기를 표현한다.",/(극놀이|역할놀이|변신|흉내|역할|병원놀이|비행기놀이)/)]},
+  {cat:"예술 감상하기",items:[N("다양한 예술을 감상하며 상상하기를 즐긴다.",/(감상|작품을 보|공연|전시|명화)/),N("서로 다른 예술 표현을 존중한다.",/(친구의 작품|다른 표현)/),N("우리나라 전통 예술에 관심을 갖고 친숙해진다.",/(전통|국악|한복|탈춤|민요)/)]}]},
+ {area:"자연탐구",goal:"탐구하는 과정을 즐기고, 자연과 더불어 살아가는 태도를 가진다.",cats:[
+  {cat:"탐구과정 즐기기",items:[N("주변 세계와 자연에 대해 지속적으로 호기심을 가진다.",/(궁금|호기심|왜 그런)/),N("궁금한 것을 탐구하는 과정에 즐겁게 참여한다.",/(탐구|지켜보|지켜봄|살펴|관찰|알아보|실험|파고|더 깊게|다시 해)/),N("탐구과정에서 서로 다른 생각에 관심을 가진다.",/(다른 생각|친구의 생각|의견)/)]},
+  {cat:"생활 속에서 탐구하기",items:[N("물체의 특성과 변화를 여러 가지 방법으로 탐색한다.",/(물체|물이|물을|모래|섞|녹|변화|흐르|고이)/),N("물체를 세어 수량을 알아본다.",/(세어|세며|숫자|몇 개|수량)/),N("물체의 위치와 방향, 모양을 알고 구별한다.",/(위치|방향|모양|위쪽|아래쪽)/),N("일상에서 길이, 무게 등의 속성을 비교한다.",/(길이|무게|높이|높은|깊|비교|길게|짧)/),N("주변에서 반복되는 규칙을 찾는다.",/(반복|규칙을 찾|패턴)/),N("일상에서 모은 자료를 기준에 따라 분류한다.",/(분류|나누어 모|종류별)/),N("도구와 기계에 대해 관심을 가진다.",/(도구|기계|비행기|자동차|돋보기|자석)/)]},
+  {cat:"자연과 더불어 살기",items:[N("주변의 동식물에 관심을 가진다.",/(동물|식물|곤충|나무|텃밭|물고기|강아지|씨앗)/),N("생명과 자연환경을 소중히 여긴다.",/(생명|묻어|키우|돌보|아끼)/),N("날씨와 계절의 변화를 생활과 관련짓는다.",/(날씨|계절|가을|여름|겨울|봄철|봄에|낙엽|바람|햇볕|햇살|눈이 오|비가 오)/)]}]}
+];
+/* 문장과 가까운 누리과정 내용: 내용마다 관찰 낱말이 문장에 몇 개 있는지, 내용범주마다 하나씩 */
+function nearNuri(text,limit=3){
+  const best=[];
+  NURI_DATA.forEach(A=>A.cats.forEach(c=>{let top=null;
+    c.items.forEach(it=>{const m=text.match(new RegExp(it.re.source,"g"))||[];if(m.length&&(!top||m.length>top.score))top={area:A.area,cat:c.cat,item:it.t,score:m.length,why:[...new Set(m)].slice(0,3)}});
+    if(top)best.push(top)}));
+  return best.sort((a,b)=>b.score-a.score).slice(0,limit);
+}
+function areaRef(r){
+  const t=KEYS.map(k=>r.slots[k]||"").join(" ");const near=nearNuri(t);
+  return `<div class="hum-head">5개 영역 ← 관찰한 경험이 실제로 보여 주는 배움을 누리과정 내용과 이어 주세요.</div>`+
+    (near.length?`<ul class="near-list">${near.map(n=>`<li><b>${n.area}<br><small>${n.cat}</small></b><span>${esc(n.item)}<br><small class="muted">이 문장에 ${n.why.map(esc).join(", ")}</small></span></li>`).join("")}</ul>`:`<p class="muted small" style="margin:6px 0 0">문장에서 가까운 내용을 찾지 못했습니다.</p>`)+
+    `<button type="button" class="near-open" data-nuri-open="${esc((near[0]||{}).area||"")}">누리과정 전체 보기</button>`;
 }
 const KEYS=SLOTS.map(s=>s[0]);
 const SLOT=Object.fromEntries(SLOTS.map(s=>[s[0],s]));
@@ -408,6 +488,7 @@ function showSrc(r,key){
   const el=document.querySelector(`[data-sid="${r.id}"] [data-src]`);if(!el)return;
   const st=srcState(r,key);el.classList.toggle("bad",st==="missing");
   if(key==="human"&&st!=="missing"){el.innerHTML=(st==="ok"?`인간상 ← 메모 원문 <b>${esc(r.src[key])}</b>`:"")+humanRef(r);return}
+  if(key==="area"&&st!=="missing"){el.innerHTML=(st==="ok"?`5개 영역 ← 메모 원문 <b>${esc(r.src[key])}</b>`:"")+areaRef(r);return}
   el.innerHTML=st==="ok"?`${NAME[key]} ← 메모 원문 <b>${esc(r.src[key])}</b>`
     :st==="missing"?`${NAME[key]} ← 메모에서 이 내용의 근거를 찾지 못했습니다. 실제로 본 것인지 확인해 주세요.`
     :st==="teacher"?`${NAME[key]} ← 교사가 직접 쓴 블록입니다.`
@@ -821,6 +902,38 @@ $("#classbar").addEventListener("click",e=>{
     if(has&&!b.dataset.armed){b.dataset.armed="1";b.classList.add("armed");b.textContent=`한 번 더 누르면 ${C.no}번과 쓴 내용이 빠집니다`;clearTimeout(minusTimer);minusTimer=setTimeout(renderClass,4000);return}
     clearTimeout(minusTimer);const i=S.kids.findIndex(k=>k.id===C.id);S.kids.splice(i,1);
     const next=S.kids[Math.min(i,S.kids.length-1)];switchKid(next.id);return}
+});
+
+/* ── 누리과정 참고: 마우스를 대면 열리고, 누르면 고정. 터치에서는 누르면 열림 ── */
+let nuriArea=NURI_DATA[0].area,nuriPinned=false,nuriHide=null;
+function renderNuri(){
+  const q=($("#nuriSearch").value||"").trim();
+  $("#nuriTabs").innerHTML=NURI_DATA.map(A=>`<button type="button" role="tab" data-area="${A.area}" aria-selected="${!q&&A.area===nuriArea}">${A.area}</button>`).join("");
+  const hl=t=>q?esc(t).split(esc(q)).join(`<mark>${esc(q)}</mark>`):esc(t);
+  const areas=q?NURI_DATA:NURI_DATA.filter(A=>A.area===nuriArea);
+  let html="";
+  areas.forEach(A=>{const cats=A.cats.map(c=>({...c,items:(q?c.items.filter(i=>i.t.includes(q)||c.cat.includes(q)):c.items).map(i=>i.t)})).filter(c=>c.items.length);
+    if(!cats.length)return;
+    html+=(q?`<p class="nuri-goal"><b>${A.area}</b></p>`:`<p class="nuri-goal"><b>목표</b> ${A.goal}</p>`)+
+      cats.map(c=>`<div class="nuri-cat"><h4>${hl(c.cat)}${q?`<small>${A.area}</small>`:""}</h4><ul>${c.items.map(i=>`<li>${hl(i)}</li>`).join("")}</ul></div>`).join("")});
+  $("#nuriBody").innerHTML=html||'<p class="muted small">찾는 낱말이 들어간 내용이 없습니다.</p>';
+}
+function openNuri(pin,area){if(area){nuriArea=area;$("#nuriSearch").value=""}clearTimeout(nuriHide);$("#nuriPanel").hidden=false;$("#nuriBtn").setAttribute("aria-expanded","true");if(pin)nuriPinned=true;renderNuri()}
+function closeNuri(){nuriPinned=false;$("#nuriPanel").hidden=true;$("#nuriBtn").setAttribute("aria-expanded","false")}
+const canHover=matchMedia("(hover:hover) and (pointer:fine)").matches;
+$("#nuriBtn").onclick=()=>{if(nuriPinned)closeNuri();else openNuri(true)};
+if(canHover){
+  $("#nuriWrap").addEventListener("mouseenter",()=>{if(!nuriPinned)openNuri(false)});
+  $("#nuriWrap").addEventListener("mouseleave",()=>{if(!nuriPinned){nuriHide=setTimeout(closeNuri,250)}});
+}
+$("#nuriClose").onclick=closeNuri;
+$("#nuriTabs").addEventListener("click",e=>{const b=e.target.closest("[data-area]");if(!b)return;nuriArea=b.dataset.area;$("#nuriSearch").value="";nuriPinned=true;renderNuri()});
+$("#nuriSearch").addEventListener("input",()=>{nuriPinned=true;renderNuri()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#nuriPanel").hidden){closeNuri();$("#nuriBtn").focus()}});
+document.addEventListener("click",e=>{
+  const o=e.target.closest("[data-nuri-open]");if(o){openNuri(true,o.dataset.nuriOpen||nuriArea);$("#nuriBtn").scrollIntoView({block:"nearest"});return}
+  /* 누른 뒤 다시 그려진 단추도 안쪽으로 보도록, 누른 순간의 경로로 판단 */
+  if(nuriPinned&&!e.composedPath().includes($("#nuriWrap")))closeNuri();
 });
 
 /* ── 우리 반 기록 파일: 선생님 컴퓨터로만 저장되고, 불러올 때도 어디로도 보내지 않음 ── */
