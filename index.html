@@ -133,6 +133,10 @@ textarea{width:100%;resize:vertical;font-size:1rem}
 .chip{font-size:.8rem;border-radius:999px;padding:2px 10px}
 .chip.ok{background:var(--ok-bg);color:var(--ok)} .chip.bad{background:var(--bad-bg);color:var(--bad)} .chip.warn{background:var(--warn-bg);color:var(--warn)}
 .copied{color:var(--ok);font-size:.9rem}
+.refined-note{margin:0;font-size:.84rem;color:var(--ok)}
+.rawview{font-size:.86rem;color:var(--muted)}
+.rawview summary{cursor:pointer}
+.rawview .raw{margin-top:6px;padding:8px 10px;border-radius:8px;background:var(--bg);line-height:1.8;overflow-wrap:anywhere}
 #aiPlace,#stPlace,#noAi,[data-polish]{display:none!important}
 footer{color:var(--muted);font-size:.8rem;border-top:1px solid var(--line);padding-top:12px}
 </style>
@@ -192,12 +196,14 @@ footer{color:var(--muted);font-size:.8rem;border-top:1px solid var(--line);paddi
         <span class="count" id="count">0 / 500자</span>
         <div class="chips" id="chips"></div>
       </div>
+      <p class="refined-note" id="refineNote" hidden></p>
+      <details class="rawview" id="rawView" hidden><summary>다듬기 전 문장 보기</summary><div class="raw" id="rawText"></div></details>
       <div class="row">
-        <button type="button" class="btn" id="refineBtn">문장 다듬기</button>
+        <button type="button" class="btn" id="refineBtn">다듬은 문장을 블록에도 반영</button>
         <button type="button" class="btn ghost" id="undoBtn" hidden>되돌리기</button>
         <span class="muted small" id="refineMsg" hidden></span>
       </div>
-      <p class="muted small">‘문장 다듬기’는 초고 말투(~했답니다, ~했음)를 ~함으로 맞추고, 블록 사이의 마침표와 겹친 말을 정리합니다. 블록마다 메모 원문을 확인하고, 실제로 본 것보다 부풀린 곳이 없을 때 옮겨 주세요.</p>
+      <p class="muted small">완성 칸에는 블록을 이은 뒤 한 번 더 다듬은 문장이 나옵니다. 초고 말투(~했답니다, ~했음)를 ~함으로 맞추고, 블록 사이의 마침표와 겹친 말을 정리하며, 마침표·쉼표·가운뎃점 외의 부호와 문단 기호는 뺍니다. 블록마다 메모 원문을 확인하고, 실제로 본 것보다 부풀린 곳이 없을 때 옮겨 주세요.</p>
       <div class="row">
         <button type="button" class="btn primary" id="copyBtn">문장 복사</button>
         <span class="copied" id="copied" hidden>복사했습니다</span>
@@ -597,10 +603,39 @@ function refineSentence(r){
     r.slots[k]=t;
   });
 }
+/* 마침표, 쉼표, 가운뎃점 외의 문장부호와 문단 기호를 정리. 고친 수를 함께 돌려줌 */
+function stripMarks(t){
+  let n=0;const c=(re,to)=>{t=t.replace(re,m=>{n++;return typeof to==="function"?to(m):to})};
+  c(/^[ \t]*(?:[-*•◦▪▫■□●○◆◇▶▷►※☞✓✔→⇒#>]+|\d+[.)]|[가-하][.)]|[①-⑳])[ \t]*/gm,"");   /* 줄 앞 글머리 기호 */
+  c(/[\r\n\t\u2028\u2029]+/g," ");                                   /* 줄바꿈, 문단 */
+  c(/\s(?:[-*•◦▪▫■□●○◆◇▶▷►※☞✓✔→⇒]+|[①-⑳])\s/g," ");
+  c(/[?!？！]+(?=\s|$)/g,".");                                          /* 물음표, 느낌표 → 마침표 */
+  c(/(\d)\s*[~～〜–—-]\s*(\d)/g,m=>m.replace(/\s*[~～〜–—-]\s*/,"·"));  /* 3~4월 → 3·4월 */
+  c(/(\d)\s*%/g,m=>m.replace(/\s*%/,"퍼센트"));
+  c(/[(（\[［{「『【〈《]\s*/g," ");c(/\s*[)）\]］}」』】〉》]/g," ");    /* 괄호는 벗기고 내용은 남김 */
+  c(/\s*[/／]\s*/g,"·");                                              /* 빗금 → 가운뎃점 */
+  c(/\s*[:：;；]\s*/g,", ");                                           /* 쌍점, 쌍반점 → 쉼표 */
+  c(/["“”'‘’`]/g,"");
+  c(/[…]+|\.{2,}/g,".");
+  c(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z0-9\s.,·ㆍ]/g," ");                          /* 나머지 기호 */
+  t=t.replace(/\s+([.,·])/g,"$1").replace(/,(?=[^\s\d])/g,", ").replace(/\.(?=[가-힣A-Za-z])/g,". ").replace(/,\s*\./g,".").replace(/\.{2,}/g,".").replace(/\s+/g," ").trim();
+  return {t,n};
+}
+/* 완성 칸에 보일 최종 문장: 블록은 그대로 두고 복사본을 다듬음 */
+function finalText(){
+  const raw=C.sents.map(sentText).filter(Boolean).join(" ");
+  const copy=JSON.parse(JSON.stringify(C.sents));copy.forEach(refineSentence);
+  let joined=copy.map(sentText).filter(Boolean).join(" ");
+  const st=stripMarks(joined);let t=st.t;
+  /* 부호를 뺀 뒤에도 문장 끝을 다시 맞춤 */
+  t=t.split(/(?<=\.)\s+/).map(x=>x.trim()).filter(Boolean).map(x=>endsNominal(x)?x:fixEnd(x)).join(" ");
+  if(t&&!/\.$/.test(t))t=fixEnd(t);
+  return {raw,text:t,marks:st.n,changed:raw.replace(/\s+/g," ").trim()!==t};
+}
 let undoSnap=null;
 $("#refineBtn").onclick=()=>{
   const before=JSON.stringify(C.sents);undoSnap=before;
-  C.sents.forEach(refineSentence);
+  C.sents.forEach(r=>{refineSentence(r);KEYS.forEach(k=>{if((r.slots[k]||"").trim()){const keepEnd=/\.$/.test(r.slots[k]);let t=stripMarks(r.slots[k]).t;if(!keepEnd)t=t.replace(/\.$/,"");r.slots[k]=t}})});
   const changed=JSON.parse(before).reduce((n,r,i)=>n+SLOTS.filter(([k])=>(r.slots[k]||"")!==(C.sents[i].slots[k]||"")).length,0);
   C.auto=false;unEx();save();renderSents();
   $("#refineMsg").hidden=false;$("#refineMsg").textContent=changed?`${changed}곳을 다듬었습니다. 블록에서 바뀐 곳을 확인하세요.`:"다듬을 곳이 없습니다.";
@@ -610,7 +645,7 @@ $("#undoBtn").onclick=()=>{if(!undoSnap)return;C.sents=JSON.parse(undoSnap);undo
 
 /* 완성 */
 function renderFinal(){
-  const text=C.sents.map(sentText).filter(Boolean).join(" ");
+  const F=finalText();const text=F.text;
   let html=esc(text);const bad=[],warn=[];
   const forb=[...new Set(text.match(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z0-9\s.,·ㆍ]/g)||[])];
   forb.forEach(ch=>{html=html.split(esc(ch)).join(`<mark>${esc(ch)}</mark>`)});
@@ -619,8 +654,11 @@ function renderFinal(){
   EVALS.filter(w=>text.includes(w)).forEach(w=>{warn.push(w);html=html.split(w).join(`<mark class="w">${w}</mark>`)});
   $("#finalText").innerHTML=html||'<span class="muted">블록을 채우면 여기에 문장이 이어집니다.</span>';
   const n=text.length;$("#count").textContent=`${n} / 500자`;
-  const sents=C.sents.map(sentText).filter(Boolean);
+  const sents=text?text.split(/(?<=\.)\s+/).filter(Boolean):[];
   const notEnd=sents.filter(s=>!endsNominal(s)).length;
+  $("#refineNote").hidden=!(text&&F.changed);
+  if(text&&F.changed)$("#refineNote").textContent=`블록을 이은 문장을 다듬었습니다${F.marks?` · 부호와 기호 ${F.marks}곳 정리`:""}. 복사하면 이 문장이 옮겨집니다.`;
+  $("#rawView").hidden=!(text&&F.changed);$("#rawText").textContent=F.raw;
   const holes=C.sents.reduce((a,r)=>a+SHAPES[r.shape].core.filter(k=>!(r.slots[k]||"").trim()).length,0);
   const miss=C.sents.reduce((a,r)=>a+SLOTS.filter(([k])=>srcState(r,k)==="missing").length,0);
   const c=[];
@@ -639,7 +677,7 @@ function renderFinal(){
 function renderClassSoft(){const el=document.querySelector(`[data-kid="${C.id}"]`);if(el)el.classList.toggle("has",C.sents.some(r=>sentText(r)));
   const p=document.querySelector("#classbar .progress");if(p)p.textContent=`작성 ${S.kids.filter(k=>k.sents.some(r=>sentText(r))).length} / ${S.kids.length}명`}
 $("#copyBtn").onclick=async()=>{
-  const t=C.sents.map(sentText).filter(Boolean).join(" ");if(!t)return;
+  const t=finalText().text;if(!t)return;
   try{await navigator.clipboard.writeText(t);$("#copied").hidden=false;setTimeout(()=>$("#copied").hidden=true,2000)}
   catch(e){const f=$("#copyFallback");f.hidden=false;f.value=t;f.focus();f.select()}
 };
