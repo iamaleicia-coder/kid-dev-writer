@@ -101,10 +101,22 @@ textarea{width:100%;resize:vertical;font-size:1rem}
 .kidbtn{min-width:2.2em;height:2.2em;border:1.5px dashed var(--line);border-radius:8px;background:transparent;color:var(--muted);font:inherit;font-size:1rem;font-weight:600;cursor:pointer;padding:0 8px}
 .kidbtn:hover{border-color:var(--accent);color:var(--accent)}
 .kidbtn.armed{border-style:solid;border-color:var(--bad);color:var(--bad);font-size:.82rem;font-weight:500}
-.databar{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;font-size:.86rem;margin-top:-16px;padding:0 4px}
-.databar .lbl{color:var(--muted);margin-right:2px}
-.databar .btn.ghost{padding:4px 8px}
-.dataMsg{color:var(--ok)}
+.databar{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:stretch;margin-top:-14px}
+.rec{--rc:var(--accent);display:flex;align-items:center;gap:10px;flex:1 1 200px;min-width:0;text-align:left;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;padding:9px 14px 9px 10px;font:inherit;cursor:pointer;transition:border-color .15s,background .15s}
+.rec:hover{border-color:var(--rc);background:color-mix(in srgb,var(--rc) 6%,var(--surface))}
+.rec .ic{flex:none;width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:color-mix(in srgb,var(--rc) 14%,var(--surface));color:var(--rc)}
+.rec .ic svg{width:22px;height:22px}
+.rec .tx{display:flex;flex-direction:column;min-width:0;line-height:1.35}
+.rec .tx b{font-size:.94rem;font-weight:600}
+.rec .tx small{font-size:.78rem;color:var(--muted)}
+.rec.save{--rc:var(--ok)}
+.rec.load{--rc:var(--accent)}
+.rec.wipe{--rc:var(--bad)}
+.rec.wipe[data-armed]{border-color:var(--bad);background:var(--bad-bg)}
+.rec.wipe[data-armed] .tx b{color:var(--bad)}
+.dataMsg{flex-basis:100%;color:var(--ok);font-size:.86rem;min-height:0}
+.dataMsg:empty{display:none}
+@media (prefers-reduced-motion:reduce){.rec{transition:none}}
 .progress{font-size:.84rem;color:var(--muted);font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 .palette{display:flex;flex-wrap:wrap;gap:6px}
 .palette span{font-size:.78rem;font-weight:600;color:var(--k-ink);background:var(--kc);border-radius:6px;padding:2px 9px}
@@ -197,12 +209,20 @@ footer{color:var(--muted);font-size:.8rem;border-top:1px solid var(--line);paddi
   </header>
 
   <div class="classbar" id="classbar" aria-label="우리 반"></div>
-  <div class="databar">
-    <span class="lbl">우리 반 기록</span>
-    <button type="button" class="btn ghost" id="exportBtn">파일로 저장</button>
-    <button type="button" class="btn ghost" id="importBtn">파일 불러오기</button>
+  <div class="databar" aria-label="우리 반 기록">
+    <button type="button" class="rec save" id="exportBtn">
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7.5 10.5 12 15l4.5-4.5"/><path d="M5 19h14"/></svg></span>
+      <span class="tx"><b>기록 저장</b><small>우리 반 기록을 내 컴퓨터에 파일로</small></span>
+    </button>
+    <button type="button" class="rec load" id="importBtn">
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8.5V18a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V8.5"/><path d="M4 8.5 6 5h12l2 3.5"/><path d="M12 16V9.5"/><path d="m9 12.5 3-3 3 3"/></svg></span>
+      <span class="tx"><b>기록 불러오기</b><small>저장한 파일로 이어 쓰기</small></span>
+    </button>
     <input type="file" id="importFile" accept=".json,application/json" hidden>
-    <button type="button" class="btn ghost" id="wipeBtn">이 브라우저에서 모두 지우기</button>
+    <button type="button" class="rec wipe" id="wipeBtn">
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 7h15"/><path d="M9.5 7V5h5v2"/><path d="M6.5 7l.8 11.2a1 1 0 0 0 1 .8h7.4a1 1 0 0 0 1-.8L17.5 7"/><path d="M10.5 10.5v5M13.5 10.5v5"/></svg></span>
+      <span class="tx"><b data-wipe-t>브라우저에서 기록 지우기</b><small data-wipe-s>공용 PC에서 다 쓰고 나갈 때</small></span>
+    </button>
     <span class="dataMsg" id="dataMsg" role="status"></span>
   </div>
   <div class="note warn" id="importConfirm" hidden><span id="importText"></span><button type="button" class="btn" id="importYes">불러오기</button><button type="button" class="btn ghost" id="importNo">취소</button></div>
@@ -972,11 +992,12 @@ $("#importYes").onclick=applyImport;
 $("#importNo").onclick=()=>{pendingImport=null;$("#importConfirm").hidden=true};
 $("#wipeBtn").onclick=()=>{
   const b=$("#wipeBtn");
-  if(b.dataset.armed){clearTimeout(wipeTimer);delete b.dataset.armed;b.textContent="이 브라우저에서 모두 지우기";b.style.color="";
+  const setW=(t,sub)=>{b.querySelector("[data-wipe-t]").textContent=t;b.querySelector("[data-wipe-s]").textContent=sub};
+  if(b.dataset.armed){clearTimeout(wipeTimer);delete b.dataset.armed;setW("브라우저에서 기록 지우기","공용 PC에서 다 쓰고 나갈 때");
     try{localStorage.removeItem(KEY);localStorage.removeItem(OLDKEY)}catch(e){}
     const k=newKid(1);S={age:S.age,isExample:false,kids:[k,newKid(2),newKid(3)],cur:k.id};C=k;save();renderAll();dataMsg("이 브라우저에서 모두 지웠습니다");return}
-  b.dataset.armed="1";b.textContent="한 번 더 누르면 우리 반 전체가 지워집니다";b.style.color="var(--bad)";
-  wipeTimer=setTimeout(()=>{delete b.dataset.armed;b.textContent="이 브라우저에서 모두 지우기";b.style.color=""},4000);
+  b.dataset.armed="1";setW("한 번 더 누르면 지워집니다","우리 반 기록이 모두 사라집니다");
+  wipeTimer=setTimeout(()=>{delete b.dataset.armed;setW("브라우저에서 기록 지우기","공용 PC에서 다 쓰고 나갈 때")},4000);
 };
 
 function renderAll(){renderClass();$("#notes").value=C.notes||"";$("#exNote").hidden=!S.isExample;nameCheck();renderSents()}
