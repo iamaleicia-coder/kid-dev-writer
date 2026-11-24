@@ -424,7 +424,9 @@ function load(){
     const k=Object.assign(newKid(1),{notes:o.notes||"",sents:o.sents,leftover:o.leftover||[],auto:!!o.auto});return {age:o.age||"5",isExample:false,kids:[k],cur:k.id}}}catch(e){}
   return null;
 }
-let S=load()||example();
+/* 처음 여는 사람에게는 예시 없이 빈 우리 반 (예전에 저장된 예시도 비움) */
+function emptyClass(){const k=newKid(1);return {isExample:false,kids:[k,newKid(2),newKid(3)],cur:k.id}}
+let S=load();if(!S||S.isExample)S=emptyClass();
 let C=S.kids.find(k=>k.id===S.cur)||S.kids[0];
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 const $=s=>document.querySelector(s);
