@@ -60,7 +60,6 @@ section{display:flex;flex-direction:column;gap:12px}
 textarea,input[type=text]{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;line-height:1.7}
 textarea{width:100%;resize:vertical;font-size:1rem}
 #notes{min-height:170px}
-#nm{padding:6px 10px;border-radius:8px;font-size:.88rem;width:15em;max-width:100%}
 .note{border-radius:10px;padding:9px 13px;font-size:.88rem;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .note.warn{background:var(--warn-bg)} .note.bad{background:var(--bad-bg)}
 .status{font-size:.9rem;color:var(--muted);display:flex;gap:10px;align-items:center}
@@ -159,14 +158,13 @@ footer{color:var(--muted);font-size:.8rem;border-top:1px solid var(--line);paddi
 
   <section>
     <h2><span class="step">1</span>초고 쓰기</h2>
-    <p class="muted small">초고는 교사가 관찰기록 자료를 재구성해 쓴 글입니다. 블록과 문장은 이 초고에서만 만들어집니다.</p>
+    <p class="muted small">초고는 교사가 관찰기록 자료를 재구성해 쓴 글입니다. 블록과 문장은 이 초고에서만 만들어집니다. 아이 이름 대신 ‘유아’, 친구는 ‘친구 A’로 적어 주세요.</p>
     <textarea id="notes" spellcheck="false" aria-label="관찰 메모" placeholder="관찰기록을 바탕으로 아이의 말과 행동, 놀이 장면을 정리해 적으세요. ‘3월에는, 요즘은’ 같은 시기가 있으면 좋습니다."></textarea>
     <div class="row">
       <button type="button" class="btn primary" id="aiPlace">AI로 다듬고 채우기</button>
       <div class="status" id="stPlace" hidden><span class="dot"></span>다듬는 중입니다<button type="button" class="btn ghost" id="stop">멈추기</button></div>
       <button type="button" class="btn" id="resetBtn">지우고 새로 쓰기</button>
       <span class="spacer"></span>
-      <input type="text" id="nm" placeholder="점검할 이름 (저장 안 함)" aria-label="점검할 이름, 쉼표로 구분" autocomplete="off">
     </div>
     <div class="note bad" id="nameWarn" hidden></div>
     <div class="note warn" id="err" hidden></div>
@@ -330,10 +328,9 @@ function renderAge(){document.querySelectorAll("#ageSeg button").forEach(b=>b.se
 $("#ageSeg").onclick=e=>{const b=e.target.closest("button");if(b){S.age=b.dataset.age;save();renderAge()}};
 
 /* 이름 점검 (저장하지 않음) */
-const names=()=>$("#nm").value.split(/[,，\s]+/).map(s=>s.trim()).filter(Boolean);
+const names=()=>[]; /* 이름 점검 칸은 뺐음 */
 const findNames=t=>names().filter(n=>t.includes(n));
 function nameCheck(){const f=[...new Set(findNames(C.notes||""))];$("#nameWarn").hidden=!f.length;if(f.length)$("#nameWarn").textContent=`메모에 이름(${f.join(", ")})이 들어 있습니다. ‘유아’, ‘친구 A’로 바꿔 주세요.`;return !f.length}
-$("#nm").addEventListener("input",()=>{nameCheck();renderFinal()});
 
 /* 원문 확인: AI가 붙인 원문이 실제 메모에 있는지 */
 function srcState(r,key){
