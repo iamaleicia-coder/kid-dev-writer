@@ -104,6 +104,17 @@ textarea{width:100%;resize:vertical;font-size:1rem}
 .blk.hole .txt:empty::before{color:var(--muted);opacity:1}
 .src{font-size:.84rem;color:var(--muted);background:var(--bg);border-radius:8px;padding:6px 10px;min-height:2.1em}
 .src b{color:var(--ink);font-weight:500}
+.hum-head{margin-bottom:6px}
+.hum{margin:0;padding:0;list-style:none;display:grid;gap:4px}
+.hum li{display:grid;grid-template-columns:9.5em minmax(0,1fr);gap:2px 10px;padding:5px 8px;border-radius:7px;border-left:3px solid transparent;color:var(--muted)}
+.hum li b{color:var(--k-human);font-weight:600}
+.hum li span{color:var(--ink)}
+.hum li em{grid-column:2;font-style:normal;font-size:.8rem;color:var(--muted)}
+.hum li.near{background:color-mix(in srgb,var(--k-human) 10%,var(--surface));border-left-color:var(--k-human)}
+@media (max-width:560px){.hum li{grid-template-columns:minmax(0,1fr)}.hum li em{grid-column:1}}
+.lens{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:.9rem}
+.lens summary{cursor:pointer;font-weight:600;color:var(--k-human)}
+.lens .hum{margin:10px 0 8px}
 .src.bad{background:var(--bad-bg)}
 .sent-foot{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:.82rem;color:var(--muted)}
 .addbar{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
@@ -162,6 +173,11 @@ footer{color:var(--muted);font-size:.8rem;border-top:1px solid var(--line);paddi
   <section>
     <h2><span class="step">2</span>문장구성 블록 채우기</h2>
     <div class="palette" id="palette"></div>
+    <details class="lens">
+      <summary>누리과정 추구하는 인간상 참고</summary>
+      <ul class="hum" id="humAll"></ul>
+      <p class="muted small">인간상은 채워야 하는 칸이 아닙니다. 관찰이 분명히 보여 줄 때만 문장의 맺음으로 이어 주세요.</p>
+    </details>
     <p class="muted small" id="autoNote" hidden>초고를 쓰는 대로 블록이 나뉩니다. 점선으로 빈 블록을 채우고, 필요하면 ‘+ 블록’으로 5개 영역과 인간상을 더하세요.</p>
     <div class="sentences" id="sentences"></div>
     <div class="row"><button type="button" class="btn" id="addSent">문장 추가</button></div>
@@ -226,10 +242,33 @@ const NURI=`[5개 영역 내용]
 사회관계: 나를 알고 소중히 여긴다 / 나의 감정을 알고 상황에 맞게 표현한다 / 내가 할 수 있는 것을 스스로 한다 / 가족의 의미를 알고 화목하게 지낸다 / 친구와 서로 도우며 사이좋게 지낸다 / 친구와의 갈등을 긍정적인 방법으로 해결한다 / 서로 다른 감정, 생각, 행동을 존중한다 / 친구와 어른께 예의 바르게 행동한다 / 약속과 규칙의 필요성을 알고 지킨다 / 내가 살고 있는 곳에 대해 궁금한 것을 알아본다 / 우리나라에 대해 자부심을 가진다 / 다양한 문화에 관심을 가진다
 예술경험: 자연과 생활에서 아름다움을 느끼고 즐긴다 / 예술적 요소에 관심을 갖고 찾아본다 / 노래를 즐겨 부른다 / 신체, 사물, 악기로 간단한 소리와 리듬을 만들어 본다 / 신체나 도구를 활용하여 움직임과 춤으로 자유롭게 표현한다 / 다양한 미술 재료와 도구로 자신의 생각과 느낌을 표현한다 / 극놀이로 경험이나 이야기를 표현한다 / 다양한 예술을 감상하며 상상하기를 즐긴다 / 서로 다른 예술 표현을 존중한다 / 우리나라 전통 예술에 관심을 갖고 친숙해진다
 자연탐구: 주변 세계와 자연에 대해 지속적으로 호기심을 가진다 / 궁금한 것을 탐구하는 과정에 즐겁게 참여한다 / 탐구과정에서 서로 다른 생각에 관심을 가진다 / 물체의 특성과 변화를 여러 가지 방법으로 탐색한다 / 물체를 세어 수량을 알아본다 / 물체의 위치와 방향, 모양을 알고 구별한다 / 일상에서 길이, 무게 등의 속성을 비교한다 / 주변에서 반복되는 규칙을 찾는다 / 일상에서 모은 자료를 기준에 따라 분류한다 / 도구와 기계에 대해 궁금한 것을 알아본다 / 주변의 동식물에 관심을 가진다 / 생명과 자연환경을 소중히 여긴다 / 날씨와 계절의 변화를 생활과 관련짓는다
-[추구하는 인간상] 건강한 사람, 자주적인 사람, 창의적인 사람, 감성이 풍부한 사람, 더불어 사는 사람`;
+[추구하는 인간상]
+- 건강한 사람: 자신의 소중함을 알고, 건강하고 안전한 생활 습관을 기르는
+- 자주적인 사람: 자신의 일을 스스로 해결하는 기초능력 있는
+- 창의적인 사람: 호기심과 탐구심을 가지고 상상력과 창의력을 갖춘
+- 감성이 풍부한 사람: 일상에서 아름다움을 느끼고 문화적 감수성을 가진
+- 더불어 사는 사람: 사람과 자연을 존중하고 배려하며 소통하는 태도를 가지고`;
 const uid=()=>Math.random().toString(36).slice(2,9);
 const blank=()=>Object.fromEntries(SLOTS.map(s=>[s[0],""]));
 /* 블록 순서: 지원형은 교사 지원이 유아 경험 앞에 옴. 교사가 ‹ › 로 옮기면 r.order 에 저장 */
+/* 2019 개정 누리과정 추구하는 인간상. re: 문장 속에서 그 인간상과 가까운 낱말 */
+const HUMANS=[
+  {name:"건강한 사람",desc:"자신의 소중함을 알고, 건강하고 안전한 생활 습관을 기르는",keys:"소중함 · 건강 · 안전 · 생활 습관",re:/(소중|건강|안전|위험|조심|손을 씻|손 씻|양치|이를 닦|골고루|먹|휴식|쉬|몸을|움직|뛰|달리|생활 습관|정리)/g},
+  {name:"자주적인 사람",desc:"자신의 일을 스스로 해결하는 기초능력 있는",keys:"스스로 · 해결 · 선택 · 끝까지",re:/(스스로|혼자|직접|해결|선택|결정|끝까지|다시 해|시도|책임|맡)/g},
+  {name:"창의적인 사람",desc:"호기심과 탐구심을 가지고 상상력과 창의력을 갖춘",keys:"호기심 · 탐구 · 상상 · 새로운 방법",re:/(궁금|호기심|탐구|탐색|살펴|관찰|실험|예측|상상|새로운|만들|바꾸어|방법|변신|아이디어|이용하여)/g},
+  {name:"감성이 풍부한 사람",desc:"일상에서 아름다움을 느끼고 문화적 감수성을 가진",keys:"아름다움 · 느낌 · 표현 · 감상",re:/(아름다|느끼|느낌|감상|노래|리듬|춤|그림|색|표현|꾸미|계절|바람|햇살|소리|감탄|문화|전통)/g},
+  {name:"더불어 사는 사람",desc:"사람과 자연을 존중하고 배려하며 소통하는",keys:"존중 · 배려 · 소통 · 함께",re:/(친구|함께|같이|도와|도움을 주|배려|양보|차례|존중|소통|이야기|말하며|나누|자연|동물|식물|생명)/g}
+];
+function humanHints(r){
+  const t=KEYS.map(k=>r.slots[k]||"").join(" ");
+  return HUMANS.map(h=>{const m=t.match(h.re)||[];return {...h,hits:[...new Set(m)]}});
+}
+function humanRef(r){
+  const hs=humanHints(r),top=Math.max(...hs.map(h=>h.hits.length));
+  return `<div class="hum-head">인간상 ← 이 문장의 관찰이 실제로 보여 주는 모습이 있을 때만 맺음으로 이어 주세요.</div><ul class="hum">`+
+    hs.map(h=>{const near=top>0&&h.hits.length===top;
+      return `<li class="${near?"near":""}"><b>${h.name}</b><span>${h.desc}</span>${near?`<em>이 문장에 ${h.hits.slice(0,3).map(esc).join(", ")}</em>`:""}</li>`}).join("")+`</ul>`;
+}
 const KEYS=SLOTS.map(s=>s[0]);
 const SLOT=Object.fromEntries(SLOTS.map(s=>[s[0],s]));
 const defaultOrder=shape=>shape==="지원형"?["time1","ctx","sup","exp","time2","dev","area","poss","human"]:KEYS.slice();
@@ -278,6 +317,7 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const norm=s=>String(s||"").replace(/["'“”‘’\s.,·]/g,"");
 
+$("#humAll").innerHTML=HUMANS.map(h=>`<li><b>${h.name}</b><span>${h.desc}</span><em>${h.keys}</em></li>`).join("");
 $("#palette").innerHTML=PALETTE.map(([k,n])=>`<span class="k-${k}">${n}</span>`).join("");
 function unEx(){if(S.isExample){S.isExample=false;$("#exNote").hidden=true}}
 function renderAge(){document.querySelectorAll("#ageSeg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.age===S.age))}
@@ -356,6 +396,7 @@ function updateWarn(r){
 function showSrc(r,key){
   const el=document.querySelector(`[data-sid="${r.id}"] [data-src]`);if(!el)return;
   const st=srcState(r,key);el.classList.toggle("bad",st==="missing");
+  if(key==="human"&&st!=="missing"){el.innerHTML=(st==="ok"?`인간상 ← 메모 원문 <b>${esc(r.src[key])}</b>`:"")+humanRef(r);return}
   el.innerHTML=st==="ok"?`${NAME[key]} ← 메모 원문 <b>${esc(r.src[key])}</b>`
     :st==="missing"?`${NAME[key]} ← 메모에서 이 내용의 근거를 찾지 못했습니다. 실제로 본 것인지 확인해 주세요.`
     :st==="teacher"?`${NAME[key]} ← 교사가 직접 쓴 블록입니다.`
@@ -518,7 +559,7 @@ function autoSplit(notes){
     slots[last]=fixEnd(slots[last]);
     const shape=shape0;
     if(shape==="장면형"){slots.time1="";delete src.time1}
-    const made=mk(shape,slots,src,{area:slots.area?"":"자동 나누기는 영역을 정하지 않음. 아래 렌즈 질문을 보고 근거가 있으면 채우기",human:"근거가 분명할 때만 채우기"});
+    const made=mk(shape,slots,src,{area:slots.area?"":"자동 나누기는 영역을 정하지 않음. 관찰이 보여 주는 배움이 있으면 채우기",human:"근거가 분명할 때만 채우기. 블록을 누르면 인간상 설명이 보임"});
     if(shape==="지원형"&&supFirst===false)made.order=KEYS.slice();
     out.push(made);
   }
