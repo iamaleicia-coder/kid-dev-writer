@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="관찰기록을 재구성한 초고를 문장구성 블록으로 나누어 유아발달상황 작성을 돕는 도구">
+<style>[hidden]{display:none!important}body{margin:0}img{max-width:100%}</style>
+<title>유아발달상황 작성 도우미</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: 한 화면 세로 흐름. 막 쓰기 → 색깔 블록 문장(장면형·변화형·지원형) → 완성 문장과 복사 */
+:root{
+  --bg:#F2F5F4; --surface:#FFFFFF; --ink:#1D2A2F; --muted:#5B6B70; --line:#D4DDDB;
+  --accent:#2C6676; --accent-ink:#FFFFFF; --accent-soft:#E1EDEF;
+  --ok:#2F7A4F; --ok-bg:#E2F1E7; --warn:#9A620F; --warn-bg:#FBF0DC; --bad:#B23A3A; --bad-bg:#F8E2E0;
+  --k-ctx:#5E6F35; --k-dev:#C2414F; --k-area:#3F8A45; --k-human:#3A72BE; --k-time:#7457A3; --k-exp:#A85A66; --k-poss:#8A6650; --k-sup:#CC7426; --k-ink:#FFFFFF;
+  --f-display:"Gowun Batang", "Nanum Myeongjo", serif;
+  --f-body:"IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#131A1C; --surface:#1B2427; --ink:#E3EBEB; --muted:#9AAAAD; --line:#2D3A3D;
+  --accent:#7DB6C4; --accent-ink:#0F1F24; --accent-soft:#1E3338;
+  --ok:#73C291; --ok-bg:#1B3325; --warn:#E3AA52; --warn-bg:#382C15; --bad:#EE8A86; --bad-bg:#3C2220;
+  --k-ctx:#9DB062; --k-dev:#E87D88; --k-area:#6FBD75; --k-human:#79A6E6; --k-time:#A98DD8; --k-exp:#D88C98; --k-poss:#C29C82; --k-sup:#EB9A50; --k-ink:#10181A;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#131A1C; --surface:#1B2427; --ink:#E3EBEB; --muted:#9AAAAD; --line:#2D3A3D;
+  --accent:#7DB6C4; --accent-ink:#0F1F24; --accent-soft:#1E3338;
+  --ok:#73C291; --ok-bg:#1B3325; --warn:#E3AA52; --warn-bg:#382C15; --bad:#EE8A86; --bad-bg:#3C2220;
+  --k-ctx:#9DB062; --k-dev:#E87D88; --k-area:#6FBD75; --k-human:#79A6E6; --k-time:#A98DD8; --k-exp:#D88C98; --k-poss:#C29C82; --k-sup:#EB9A50; --k-ink:#10181A;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 56px}
+.wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+h1,h2{font-family:var(--f-display);font-weight:700;text-wrap:balance;margin:0}
+h1{font-size:1.65rem;line-height:1.25}
+h2{font-size:1.15rem;display:flex;align-items:baseline;gap:10px}
+h2 .step{font-family:var(--f-mono);font-size:.85rem;color:var(--accent);font-weight:500}
+p{margin:0}
+.muted{color:var(--muted)} .small{font-size:.86rem}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px 24px}
+header p{color:var(--muted);margin-top:4px;max-width:60ch}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:transparent;color:var(--ink);padding:6px 12px;font:inherit;font-size:.9rem;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.seg.sm button{padding:2px 9px;font-size:.8rem}
+section{display:flex;flex-direction:column;gap:12px}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:8px 16px;font:inherit;font-size:.93rem;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--muted);padding:4px 8px;font-size:.84rem}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.spacer{flex:1}
+textarea,input[type=text]{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;line-height:1.7}
+textarea{width:100%;resize:vertical;font-size:1rem}
+#notes{min-height:170px}
+#nm{padding:6px 10px;border-radius:8px;font-size:.88rem;width:15em;max-width:100%}
+.note{border-radius:10px;padding:9px 13px;font-size:.88rem;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.note.warn{background:var(--warn-bg)} .note.bad{background:var(--bad-bg)}
+.status{font-size:.9rem;color:var(--muted);display:flex;gap:10px;align-items:center}
+.status .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1.2s infinite}
+@keyframes pulse{50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.status .dot{animation:none}}
+
+.classbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.classbar .lbl{font-size:.82rem;color:var(--muted);margin-right:4px}
+.kid{position:relative;min-width:2.8em;height:2.2em;border:1.5px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;font-size:.86rem;font-family:var(--f-mono);cursor:pointer;padding:0 8px}
+.kid[aria-current="true"]{border-color:var(--accent);background:var(--accent);color:var(--accent-ink)}
+.kid.has::after{content:"";position:absolute;right:-4px;top:-4px;width:9px;height:9px;border-radius:50%;background:var(--ok);border:2px solid var(--surface)}
+.kidbtn{min-width:2.2em;height:2.2em;border:1.5px dashed var(--line);border-radius:8px;background:transparent;color:var(--muted);font:inherit;font-size:1rem;font-weight:600;cursor:pointer;padding:0 8px}
+.kidbtn:hover{border-color:var(--accent);color:var(--accent)}
+.kidbtn.armed{border-style:solid;border-color:var(--bad);color:var(--bad);font-size:.82rem;font-weight:500}
+.progress{font-size:.84rem;color:var(--muted);font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.palette{display:flex;flex-wrap:wrap;gap:6px}
+.palette span{font-size:.78rem;font-weight:600;color:var(--k-ink);background:var(--kc);border-radius:6px;padding:2px 9px}
+.k-ctx{--kc:var(--k-ctx)} .k-dev{--kc:var(--k-dev)} .k-area{--kc:var(--k-area)} .k-human{--kc:var(--k-human)}
+.k-time{--kc:var(--k-time)} .k-exp{--kc:var(--k-exp)} .k-poss{--kc:var(--k-poss)} .k-sup{--kc:var(--k-sup)}
+
+.sentences{display:flex;flex-direction:column;gap:12px}
+.sent{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 12px 10px;display:flex;flex-direction:column;gap:8px}
+.sent-top{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:.8rem;color:var(--muted)}
+.blocks{display:flex;flex-wrap:wrap;gap:6px 4px;align-items:stretch}
+.blk{position:relative;display:inline-flex;flex-direction:column;background:var(--kc);color:var(--k-ink);border-radius:7px 14px 14px 7px;padding:3px 14px 6px 11px;max-width:100%;min-width:0;cursor:text}
+.blk::after{content:"";position:absolute;right:-5px;top:50%;width:10px;height:10px;margin-top:-5px;border-radius:50%;background:var(--kc)}
+.blk:last-child::after{display:none}
+.blk .tag{font-size:.66rem;font-weight:700;opacity:.85;letter-spacing:.02em;line-height:1.4;user-select:none;display:flex;gap:6px;align-items:center}
+.blk .tag .flag{background:var(--bad-bg);color:var(--bad);border-radius:4px;padding:0 4px;font-size:.62rem}
+.blk .txt{font-size:.98rem;font-weight:500;line-height:1.5;outline:none;min-width:3em;overflow-wrap:anywhere}
+.blk .txt:empty::before{content:attr(data-ph);opacity:.75;font-weight:400}
+.blk:focus-within{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--kc)}
+.blk.hole{background:transparent;color:var(--ink);border:2px dashed var(--kc);padding:2px 13px 5px 10px}
+.blk.hole::after{display:none}
+.blk.hole .tag{color:var(--kc);opacity:1}
+.blk.hole .txt:empty::before{color:var(--muted);opacity:1}
+.src{font-size:.84rem;color:var(--muted);background:var(--bg);border-radius:8px;padding:6px 10px;min-height:2.1em}
+.src b{color:var(--ink);font-weight:500}
+.src.bad{background:var(--bad-bg)}
+.sent-foot{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:.82rem;color:var(--muted)}
+.addbar{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.add{border:1px dashed var(--kc);color:var(--kc);background:transparent;border-radius:6px;font:inherit;font-size:.74rem;font-weight:600;padding:1px 7px;cursor:pointer}
+.warnTxt{color:var(--bad)}
+.nobasis{font-size:.8rem;color:var(--muted)}
+.leftover{font-size:.86rem;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+.leftover b{color:var(--ink);font-weight:500}
+
+.final{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.final .text{font-size:1.02rem;line-height:1.9;overflow-wrap:anywhere}
+.final .text mark{background:var(--bad-bg);box-shadow:inset 0 -2px 0 var(--bad);color:inherit;border-radius:3px}
+.final .text mark.w{background:var(--warn-bg);box-shadow:inset 0 -2px 0 var(--warn)}
+.count{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:.9rem}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:.8rem;border-radius:999px;padding:2px 10px}
+.chip.ok{background:var(--ok-bg);color:var(--ok)} .chip.bad{background:var(--bad-bg);color:var(--bad)} .chip.warn{background:var(--warn-bg);color:var(--warn)}
+.copied{color:var(--ok);font-size:.9rem}
+#aiPlace,#stPlace,#noAi,[data-polish]{display:none!important}
+footer{color:var(--muted);font-size:.8rem;border-top:1px solid var(--line);padding-top:12px}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>유아발달상황 작성 도우미</h1>
+      <p>초고를 쓰면 문장구성 블록으로 나눠 줍니다. 블록을 누르면 메모 원문이 보이고, 빈 블록만 채우면 문장이 완성됩니다.</p>
+    </div>
+    <div class="seg" id="ageSeg" role="group" aria-label="연령">
+      <button type="button" data-age="3">만 3세</button><button type="button" data-age="4">만 4세</button><button type="button" data-age="5">만 5세</button>
+    </div>
+  </header>
+
+  <div class="classbar" id="classbar" aria-label="우리 반"></div>
+
+  <section>
+    <h2><span class="step">1</span>초고 쓰기</h2>
+    <p class="muted small">초고는 교사가 관찰기록 자료를 재구성해 쓴 글입니다. 블록과 문장은 이 초고에서만 만들어집니다.</p>
+    <textarea id="notes" spellcheck="false" aria-label="관찰 메모" placeholder="관찰기록을 바탕으로 아이의 말과 행동, 놀이 장면을 정리해 적으세요. ‘3월에는, 요즘은’ 같은 시기가 있으면 좋습니다."></textarea>
+    <div class="row">
+      <button type="button" class="btn primary" id="aiPlace">AI로 다듬고 채우기</button>
+      <div class="status" id="stPlace" hidden><span class="dot"></span>다듬는 중입니다<button type="button" class="btn ghost" id="stop">멈추기</button></div>
+      <button type="button" class="btn" id="resetBtn">지우고 새로 쓰기</button>
+      <span class="spacer"></span>
+      <input type="text" id="nm" placeholder="점검할 이름 (저장 안 함)" aria-label="점검할 이름, 쉼표로 구분" autocomplete="off">
+    </div>
+    <div class="note bad" id="nameWarn" hidden></div>
+    <div class="note warn" id="err" hidden></div>
+    <div class="note warn" id="noAi" hidden>이 화면에서는 Claude를 부를 수 없습니다. ‘문장 추가’로 블록을 직접 채우면 됩니다.</div>
+    <p class="muted small" id="exNote" hidden>지금 보이는 내용은 지어낸 예시입니다. <button type="button" class="btn ghost" id="clearAll">예시 지우기</button></p>
+  </section>
+
+  <section>
+    <h2><span class="step">2</span>문장구성 블록 채우기</h2>
+    <div class="palette" id="palette"></div>
+    <p class="muted small" id="autoNote" hidden>초고를 쓰는 대로 블록이 나뉩니다. 점선으로 빈 블록을 채우고, 필요하면 ‘+ 블록’으로 5개 영역과 인간상을 더하세요.</p>
+    <div class="sentences" id="sentences"></div>
+    <div class="row"><button type="button" class="btn" id="addSent">문장 추가</button></div>
+    <div class="leftover" id="leftover" hidden></div>
+  </section>
+
+  <section>
+    <h2><span class="step">3</span>완성</h2>
+    <div class="final">
+      <div class="text" id="finalText"></div>
+      <div class="row">
+        <span class="count" id="count">0 / 500자</span>
+        <div class="chips" id="chips"></div>
+      </div>
+      <p class="muted small">블록마다 메모 원문을 확인하고, 실제로 본 것보다 부풀린 곳이 없을 때 옮겨 주세요.</p>
+      <div class="row">
+        <button type="button" class="btn primary" id="copyBtn">문장 복사</button>
+        <span class="copied" id="copied" hidden>복사했습니다</span>
+      </div>
+      <textarea id="copyFallback" rows="3" hidden aria-label="복사할 문장"></textarea>
+    </div>
+  </section>
+
+  <footer><p style="margin:0 0 4px;color:var(--ink)">작성: 안은희(시화유치원 원감)</p>이 프로그램은 교육부의 공식 자료가 아닙니다. 「2026 유치원생활기록부 유아발달상황 작성 현장지원자료」의 기술 요소를 바탕으로 작성을 돕기 위해 만들었습니다. 최종 확인은 교사가 합니다. 입력한 내용은 이 브라우저에만 저장되며 어디로도 전송되지 않습니다.</footer>
+</div>
+
+<script>
+(function(){
+const KEY="kid-dev-blocks-v3";
+const OLDKEY="kid-dev-blocks-v2";
+/* 블록은 늘 이 순서로 이어져 한 문장이 됨 */
+const SLOTS=[
+  ["time1","time","시간","학기 초에는"],
+  ["ctx","ctx","놀이·일상","어디에서"],
+  ["exp","exp","유아 경험","한 말, 행동"],
+  ["sup","sup","교사 지원","교사의 도움을 받아"],
+  ["time2","time","시간","점차"],
+  ["dev","dev","발달 특성","발달 모습"],
+  ["area","area","5개 영역","교육과정 내용"],
+  ["poss","poss","변화 가능성","나아갈 모습"],
+  ["human","human","인간상","~함."]
+];
+const NAME=Object.fromEntries(SLOTS.map(s=>[s[0],s[2]]));
+/* 문장 모양: 기본으로 비워 보여 줄(채워야 할) 블록 */
+const SHAPES={
+  "장면형":{core:["ctx","exp"],tip:"한 장면에서 드러난 모습"},
+  "변화형":{core:["time1","ctx","exp","time2"],tip:"학기 초와 지금이 달라진 모습"},
+  "지원형":{core:["ctx","exp","sup"],tip:"교사의 도움으로 해낸 모습"}
+};
+const PALETTE=[["time","시간"],["ctx","놀이·일상"],["exp","유아 경험"],["sup","교사 지원"],["dev","발달 특성"],["area","5개 영역"],["poss","변화 가능성"],["human","인간상"]];
+const BRANDS=["레고","듀플로","맥포머스","지오맥스","카프라","플레이도우","아이클레이","아이패드","갤럭시탭","유튜브","크레욜라","뽀로로","핑크퐁","티니핑","타요","포켓몬","스카치테이프","포스트잇","호치키스","뽁뽁이","딱풀"];
+const EVALS=["뛰어나","뛰어남","능숙","돋보","풍부함","원만","우수","훌륭","탁월","똑똑","착하","착함","예쁘","완벽","최고","것 같","생각됨"];
+const NOUN_M=["마음","사람","그림","이름","몸","봄","힘","꿈","춤","점","밤","김","섬","잠"];
+const NURI=`[5개 영역 내용]
+신체운동·건강: 신체를 인식하고 움직인다 / 신체 움직임을 조절한다 / 기초적인 이동운동, 제자리 운동, 도구를 이용한 운동을 한다 / 실내외 신체활동에 자발적으로 참여한다 / 자신의 몸과 주변을 깨끗이 한다 / 몸에 좋은 음식에 관심을 가지고 바른 태도로 즐겁게 먹는다 / 하루 일과에서 적당한 휴식을 취한다 / 질병을 예방하는 방법을 알고 실천한다 / 일상에서 안전하게 놀이하고 생활한다 / TV, 컴퓨터, 스마트폰 등을 바르게 사용한다 / 교통안전 규칙을 지킨다 / 안전사고, 화재, 재난, 학대, 유괴 등에 대처하는 방법을 경험한다
+의사소통: 말이나 이야기를 관심 있게 듣는다 / 자신의 경험, 느낌, 생각을 말한다 / 상황에 적절한 단어를 사용하여 말한다 / 상대방이 하는 이야기를 듣고 관련해서 말한다 / 바른 태도로 듣고 말한다 / 고운 말을 사용한다 / 말과 글의 관계에 관심을 가진다 / 주변의 상징, 글자 등의 읽기에 관심을 가진다 / 자신의 생각을 글자와 비슷한 형태로 표현한다 / 책에 관심을 가지고 상상하기를 즐긴다 / 동화, 동시에서 말의 재미를 느낀다 / 말놀이와 이야기 짓기를 즐긴다
+사회관계: 나를 알고 소중히 여긴다 / 나의 감정을 알고 상황에 맞게 표현한다 / 내가 할 수 있는 것을 스스로 한다 / 가족의 의미를 알고 화목하게 지낸다 / 친구와 서로 도우며 사이좋게 지낸다 / 친구와의 갈등을 긍정적인 방법으로 해결한다 / 서로 다른 감정, 생각, 행동을 존중한다 / 친구와 어른께 예의 바르게 행동한다 / 약속과 규칙의 필요성을 알고 지킨다 / 내가 살고 있는 곳에 대해 궁금한 것을 알아본다 / 우리나라에 대해 자부심을 가진다 / 다양한 문화에 관심을 가진다
+예술경험: 자연과 생활에서 아름다움을 느끼고 즐긴다 / 예술적 요소에 관심을 갖고 찾아본다 / 노래를 즐겨 부른다 / 신체, 사물, 악기로 간단한 소리와 리듬을 만들어 본다 / 신체나 도구를 활용하여 움직임과 춤으로 자유롭게 표현한다 / 다양한 미술 재료와 도구로 자신의 생각과 느낌을 표현한다 / 극놀이로 경험이나 이야기를 표현한다 / 다양한 예술을 감상하며 상상하기를 즐긴다 / 서로 다른 예술 표현을 존중한다 / 우리나라 전통 예술에 관심을 갖고 친숙해진다
+자연탐구: 주변 세계와 자연에 대해 지속적으로 호기심을 가진다 / 궁금한 것을 탐구하는 과정에 즐겁게 참여한다 / 탐구과정에서 서로 다른 생각에 관심을 가진다 / 물체의 특성과 변화를 여러 가지 방법으로 탐색한다 / 물체를 세어 수량을 알아본다 / 물체의 위치와 방향, 모양을 알고 구별한다 / 일상에서 길이, 무게 등의 속성을 비교한다 / 주변에서 반복되는 규칙을 찾는다 / 일상에서 모은 자료를 기준에 따라 분류한다 / 도구와 기계에 대해 궁금한 것을 알아본다 / 주변의 동식물에 관심을 가진다 / 생명과 자연환경을 소중히 여긴다 / 날씨와 계절의 변화를 생활과 관련짓는다
+[추구하는 인간상] 건강한 사람, 자주적인 사람, 창의적인 사람, 감성이 풍부한 사람, 더불어 사는 사람`;
+const uid=()=>Math.random().toString(36).slice(2,9);
+const blank=()=>Object.fromEntries(SLOTS.map(s=>[s[0],""]));
+const mk=(shape,slots,src,why)=>({id:uid(),shape:SHAPES[shape]?shape:"장면형",slots:Object.assign(blank(),slots||{}),src:src||{},why:why||{},extra:[]});
+
+const newKid=n=>({id:uid(),no:n,notes:"",sents:[],leftover:[],auto:true});
+function example(){
+  const k=newKid(1);
+  Object.assign(k,{auto:false,
+    notes:`3월에는 역할놀이에서 친구랑 원하는 역할이 겹치면 놀이를 그만둠. 4월에 옆에서 같이 차례 정하기를 몇 번 해 봄. 6월 병원놀이에서 친구가 의사 하고 싶다니까 "그럼 다음엔 네가 해" 하고 간호사를 함.
+5월 바깥놀이 모래에서 물길 팜. 물이 고이니까 "여기가 높아서 그래" 하며 더 깊게 파고 물 흘러가는 걸 30분 넘게 봄.
+양치할 때 순서 그림 보면서 혼자 닦음. 가방 정리, 겉옷 걸기도 혼자 함.
+요즘 색종이를 길게 이어 붙여 물길 꾸미기를 자주 함.
+착하고 똑똑한 아이.`,
+    sents:[
+      mk("변화형",
+        {time1:"학기 초에는",ctx:"역할놀이에서",exp:"친구와 원하는 역할이 겹치면 놀이를 그만두곤 하였으나",sup:"교사와 함께 차례 정하기를 경험한 뒤",time2:"점차",area:"친구가 같은 역할을 원하면 다음 차례를 제안하고 다른 역할을 맡는 등 갈등을 긍정적으로 해결하며",human:"친구와 함께 놀이를 이어 감."},
+        {time1:"3월에는",ctx:"역할놀이에서",exp:"친구랑 원하는 역할이 겹치면 놀이를 그만둠",sup:"4월에 옆에서 같이 차례 정하기를 몇 번 해 봄",time2:"6월 병원놀이에서",area:"\"그럼 다음엔 네가 해\" 하고 간호사를 함",human:"간호사를 함"}),
+      mk("장면형",
+        {ctx:"바깥놀이에서 모래에 판 물길에 물이 고이자",exp:"높아서 그렇다고 말하며 바닥을 더 깊게 파고 물이 흐르는 끝을 30분 넘게 지켜보는 등",area:"궁금한 현상을 직접 바꾸어 보며 탐구하는 과정에 즐겁게 참여함."},
+        {ctx:"5월 바깥놀이 모래에서 물길 팜",exp:"\"여기가 높아서 그래\" 하며 더 깊게 파고 물 흘러가는 걸 30분 넘게 봄",area:"더 깊게 파고"},
+        {human:"한 장면만으로 인간상을 붙이기에는 근거가 부족함"}),
+      mk("장면형",
+        {ctx:"양치 시간에",exp:"순서 그림을 보며 혼자 이를 닦고 가방 정리와 겉옷 걸기를 하는 등",area:"자신이 할 수 있는 일을 스스로 하며",human:"자율적으로 생활하는 습관을 지님."},
+        {ctx:"양치할 때",exp:"순서 그림 보면서 혼자 닦음. 가방 정리, 겉옷 걸기도 혼자 함",area:"혼자 함",human:"혼자 함"}),
+      mk("장면형",
+        {exp:"색종이를 길게 이어 붙여 물길을 꾸미는 등"},
+        {exp:"색종이를 길게 이어 붙여 물길 꾸미기를 자주 함"},
+        {ctx:"어떤 시간에 했는지 메모에 ‘요즘’만 있음",area:"무엇을 표현하려 했는지 메모에 없음"})
+    ],
+    leftover:[["착하고 똑똑한 아이","평가하는 말이라 넣지 않음"]]});
+  return {age:"5",isExample:true,kids:[k,newKid(2),newKid(3)],cur:k.id};
+}
+function load(){
+  try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&Array.isArray(s.kids)&&s.kids.length)return s}catch(e){}
+  /* 예전 버전(한 아이)에서 쓰던 내용은 1번으로 옮김 */
+  try{const o=JSON.parse(localStorage.getItem(OLDKEY));if(o&&Array.isArray(o.sents)&&!o.isExample&&((o.notes||"").trim()||o.sents.length)){
+    const k=Object.assign(newKid(1),{notes:o.notes||"",sents:o.sents,leftover:o.leftover||[],auto:!!o.auto});return {age:o.age||"5",isExample:false,kids:[k],cur:k.id}}}catch(e){}
+  return null;
+}
+let S=load()||example();
+let C=S.kids.find(k=>k.id===S.cur)||S.kids[0];
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const norm=s=>String(s||"").replace(/["'“”‘’\s.,·]/g,"");
+
+$("#palette").innerHTML=PALETTE.map(([k,n])=>`<span class="k-${k}">${n}</span>`).join("");
+function unEx(){if(S.isExample){S.isExample=false;$("#exNote").hidden=true}}
+function renderAge(){document.querySelectorAll("#ageSeg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.age===S.age))}
+$("#ageSeg").onclick=e=>{const b=e.target.closest("button");if(b){S.age=b.dataset.age;save();renderAge()}};
+
+/* 이름 점검 (저장하지 않음) */
+const names=()=>$("#nm").value.split(/[,，\s]+/).map(s=>s.trim()).filter(Boolean);
+const findNames=t=>names().filter(n=>t.includes(n));
+function nameCheck(){const f=[...new Set(findNames(C.notes||""))];$("#nameWarn").hidden=!f.length;if(f.length)$("#nameWarn").textContent=`메모에 이름(${f.join(", ")})이 들어 있습니다. ‘유아’, ‘친구 A’로 바꿔 주세요.`;return !f.length}
+$("#nm").addEventListener("input",()=>{nameCheck();renderFinal()});
+
+/* 원문 확인: AI가 붙인 원문이 실제 메모에 있는지 */
+function srcState(r,key){
+  if(!(r.slots[key]||"").trim())return "none";
+  const s=r.src[key];
+  if(s===undefined)return "teacher";
+  if(!s||!norm(C.notes).includes(norm(s)))return "missing";
+  return "ok";
+}
+
+/* 블록 */
+const isCore=(r,key)=>SHAPES[r.shape].core.includes(key);
+const shown=(r,key)=>isCore(r,key)||(r.slots[key]||"").trim()||r.extra.includes(key);
+function sentHTML(r){
+  const blocks=SLOTS.filter(([key])=>shown(r,key)).map(([key,k,name,ph])=>{
+    const v=r.slots[key]||"";const st=srcState(r,key);
+    return `<span class="blk k-${k}${v.trim()?"":" hole"}"><span class="tag">${name}${st==="missing"?'<span class="flag">원문 확인</span>':""}</span><span class="txt" contenteditable="true" spellcheck="false" role="textbox" aria-label="${name}" data-slot="${key}" data-ph="${esc(ph)}">${esc(v)}</span></span>`}).join("");
+  const missing=SLOTS.filter(([key])=>!shown(r,key));
+  const nob=SLOTS.filter(([key])=>!shown(r,key)&&r.why[key]).map(([key])=>`${NAME[key]}: ${esc(r.why[key])}`);
+  return `<div class="sent" data-sid="${r.id}">
+    <div class="sent-top">
+      <div class="seg sm" role="group" aria-label="문장 모양">${Object.keys(SHAPES).map(s=>`<button type="button" data-shape="${s}" aria-pressed="${s===r.shape}" title="${SHAPES[s].tip}">${s}</button>`).join("")}</div>
+      <span>${SHAPES[r.shape].tip}</span>
+      <span class="spacer"></span>
+      <button type="button" class="btn ghost" data-polish>자연스럽게 잇기</button>
+      <button type="button" class="btn ghost" data-del>삭제</button>
+    </div>
+    <div class="blocks">${blocks}</div>
+    <div class="src" data-src>블록을 누르면 그 내용이 메모의 어디에서 왔는지 보입니다.</div>
+    <div class="sent-foot">
+      ${missing.length?`<div class="addbar">${missing.map(([key,k,name])=>`<button type="button" class="add k-${k}" data-add="${key}">+ ${name}</button>`).join("")}</div>`:""}
+      <span class="spacer"></span>
+      <span class="warnTxt" data-w></span>
+    </div>
+    ${nob.length?`<div class="nobasis">근거가 없어 비워 둔 블록 · ${nob.join(" · ")}</div>`:""}
+  </div>`;
+}
+function renderSents(){
+  $("#sentences").innerHTML=C.sents.length?C.sents.map(sentHTML).join(""):`<p class="muted small">1에 초고를 쓰면 여기에 색깔 블록이 바로 나타납니다.</p>`;
+  $("#autoNote").hidden=!(C.auto&&C.sents.length);
+  C.sents.forEach(updateWarn);
+  const lo=C.leftover||[];$("#leftover").hidden=!lo.length;
+  $("#leftover").innerHTML=`<span>문장에 넣지 않은 메모</span>`+lo.map(([t,r])=>`<span><b>${esc(t)}</b> · ${esc(r)}</span>`).join("");
+  renderFinal();
+}
+const sentText=r=>SLOTS.map(([key])=>(r.slots[key]||"").trim()).filter(Boolean).join(" ").replace(/\s+/g," ");
+function endsNominal(s){
+  s=s.trim();if(!s.endsWith("."))return false;
+  const body=s.slice(0,-1).trim();const c=body.slice(-1).charCodeAt(0);
+  if(!(c>=0xAC00&&c<=0xD7A3&&(c-0xAC00)%28===16))return false;
+  const last=body.split(/\s+/).pop();return !NOUN_M.includes(last);
+}
+function updateWarn(r){
+  const el=document.querySelector(`[data-sid="${r.id}"] [data-w]`);if(!el)return;
+  const holes=SHAPES[r.shape].core.filter(key=>!(r.slots[key]||"").trim());
+  const t=sentText(r);const miss=SLOTS.filter(([key])=>srcState(r,key)==="missing").length;
+  const w=[];
+  if(holes.length)w.push(`빈 블록: ${holes.map(k=>NAME[k]).join(", ")}`);
+  else if(t&&!endsNominal(t))w.push("마지막 블록을 ~함. 으로 맺어 주세요");
+  if(miss)w.push(`원문 확인 ${miss}`);
+  el.textContent=w.join(" · ");
+}
+function showSrc(r,key){
+  const el=document.querySelector(`[data-sid="${r.id}"] [data-src]`);if(!el)return;
+  const st=srcState(r,key);el.classList.toggle("bad",st==="missing");
+  el.innerHTML=st==="ok"?`${NAME[key]} ← 메모 원문 <b>${esc(r.src[key])}</b>`
+    :st==="missing"?`${NAME[key]} ← 메모에서 이 내용의 근거를 찾지 못했습니다. 실제로 본 것인지 확인해 주세요.`
+    :st==="teacher"?`${NAME[key]} ← 교사가 직접 쓴 블록입니다.`
+    :`${NAME[key]} ← 비어 있습니다. 메모에 근거가 있으면 채우고, 없으면 비워 두세요.`;
+}
+$("#sentences").addEventListener("focusin",e=>{const t=e.target.closest("[data-slot]");if(!t)return;const r=C.sents.find(x=>x.id===t.closest("[data-sid]").dataset.sid);r&&showSrc(r,t.dataset.slot)});
+$("#sentences").addEventListener("input",e=>{
+  const t=e.target.closest("[data-slot]");if(!t)return;const r=C.sents.find(x=>x.id===t.closest("[data-sid]").dataset.sid);if(!r)return;
+  const key=t.dataset.slot;
+  /* 비어 있던 블록을 교사가 채우면 '교사가 쓴 블록' */
+  if(!(r.slots[key]||"").trim()&&!r.src[key])delete r.src[key];
+  r.slots[key]=t.textContent;t.closest(".blk").classList.toggle("hole",!t.textContent.trim());
+  C.auto=false;unEx();updateWarn(r);renderFinal();save();
+});
+$("#sentences").addEventListener("keydown",e=>{if(e.target.matches("[data-slot]")&&e.key==="Enter")e.preventDefault()});
+$("#sentences").addEventListener("paste",e=>{if(!e.target.closest("[data-slot]"))return;e.preventDefault();const t=(e.clipboardData||window.clipboardData).getData("text").replace(/\s+/g," ");document.execCommand("insertText",false,t)});
+$("#sentences").addEventListener("click",e=>{
+  const s=e.target.closest("[data-sid]");if(!s)return;const i=C.sents.findIndex(x=>x.id===s.dataset.sid);const r=C.sents[i];
+  const blk=e.target.closest(".blk");if(blk&&!e.target.matches("[data-slot]")){blk.querySelector("[data-slot]").focus();return}
+  const sh=e.target.closest("[data-shape]");if(sh){r.shape=sh.dataset.shape;C.auto=false;unEx();save();renderSents();return}
+  if(e.target.dataset.add){r.extra.push(e.target.dataset.add);C.auto=false;unEx();save();renderSents();const n=document.querySelector(`[data-sid="${r.id}"] [data-slot="${e.target.dataset.add}"]`);n&&n.focus();return}
+  if(e.target.matches("[data-del]")){C.sents.splice(i,1);C.auto=false;unEx();save();renderSents();return}
+  if(e.target.matches("[data-polish]"))polish(r,e.target);
+});
+$("#addSent").onclick=()=>{C.sents.push(mk("장면형"));C.auto=false;unEx();save();renderSents()};
+
+/* ── 쓰는 대로 나누기: 브라우저 안의 규칙, 토큰 0 ── */
+const EARLY=/^(학기\s?초|처음|1학기\s?초|3\s?[,~·]?\s?4월|3월|4월)(에는|에|엔|부터|만 해도)?\s*/;
+const LATER=/^(요즘|최근|이제|지금은|지금|점점|2학기|[5-9]월|1[0-2]월)(에는|에|엔|은|는|부터)?\s*/;
+const HOME=/(엄마|아빠|어머니|아버지|집에서|가정에서|부모님|할머니)/;
+const SUP=/(교사|선생님|내가|제가)[^,.]*?(도와|도움|같이|함께|옆에서|보여|알려)/;
+const CTXW=/(놀이|시간|활동|영역|놀이터|산책|급식|점심|간식|등원|하원|양치|모래|바깥|텃밭|교실|체험|이야기 나누기|정리)/;
+const ENDS=[[/(했다|하였다|한다|했음|하였음|해요|했어요)$/,"함"],[/(봤다|보았다|본다|봤음)$/,"봄"],[/(갔다|간다)$/,"감"],[/(왔다|온다)$/,"옴"],[/(줬다|주었다|준다|줬음)$/,"줌"],[/(있다|있었다)$/,"있음"],[/(없다|없었다)$/,"없음"],[/(었다)$/,"었음"],[/(였다)$/,"였음"],[/(하고|했고)$/,"함"]];
+/* 끝말을 명사형으로: "그만뒀다" → "그만둠" 같은 흔한 꼴만 */
+function nominal(s){
+  s=s.trim().replace(/[.!?。]+$/,"").trim();
+  for(const [re,to] of ENDS){if(re.test(s)){s=s.replace(re,to);break}}
+  return s;
+}
+const fixEnd=s=>nominal(s)+".";
+/* 명사형 끝말에서 줄기만: 함→하, 팜→파, 닦음→닦 */
+function stem(s){
+  s=nominal(s);
+  if(/음$/.test(s))return s.slice(0,-1);
+  const c=s.charCodeAt(s.length-1);
+  if(c>=0xAC00&&c<=0xD7A3&&(c-0xAC00)%28===16)return s.slice(0,-1)+String.fromCharCode(c-16);
+  return null;
+}
+const conn=s=>{const t=stem(s);return t?t+"고":nominal(s)+"며"};
+const contrast=s=>{const t=stem(s);return t?t+"곤 하였으나":nominal(s)+"였으나"};
+/* 아이가 한 말을 간접 표현으로: 해→하라고, 그래→그렇다고, ~다→~다고, ~자→~자고 */
+function indirect(q){
+  q=q.trim().replace(/[!?.~]+$/,"").replace(/요$/,"");
+  if(/그래$/.test(q))return q.replace(/그래$/,"그렇다고");
+  if(/해$/.test(q))return q.replace(/해$/,"하라고");
+  if(/[다자]$/.test(q))return q+"고";
+  if(/야$/.test(q))return q.replace(/(이)?야$/,"이라고");
+  return q+"라고";
+}
+function unquote(s){return s.replace(/["“”]([^"“”]+)["“”]\s*(라고\s*)?(하고|하며|하면서|말하며|말하고|라며)?/g,(m,a)=>indirect(a)+" 말하며 ").replace(/['‘’]/g,"").replace(/\s+/g," ").trim()}
+const CTXRE=/^(.{0,22}?(에서|할 때|하는 동안|중에|시간에|때))\s+(.+)$/;
+/* "~했을 때, ~" 처럼 쉼표로 끊긴 상황 */
+const COMMACTX=/^([^,]{2,26}(때|에서|중에|동안)),\s*(.+)$/;
+function autoSplit(notes){
+  /* 문장 단위로 자르고, 이어지는 짧은 메모나 학기 초→도움→요즘 흐름만 한 문장으로 묶음 */
+  const all=notes.split(/\n+/).map(s=>s.trim()).filter(Boolean).map(l=>l.split(/(?<=[.。!?])\s+/).map(s=>s.trim()).filter(s=>s.replace(/[.\s]/g,"").length>3));
+  const ownCtx=t=>{const c=t.match(CTXRE);return (c&&CTXW.test(c[1]))||COMMACTX.test(t)};
+  const groups=[];
+  for(const line of all){let cur=null;
+    for(const sub of line){
+      const bare=sub.replace(/[.。!?]+$/,"");
+      const early=cur&&cur.some(x=>EARLY.test(x));
+      const len=cur?cur.join(" ").length:0;
+      const attach=cur&&cur.length<3&&(!EARLY.test(bare)||early)&&((early&&(SUP.test(bare)||LATER.test(bare)))||(len<25&&!ownCtx(bare)));
+      if(attach)cur.push(sub);else{cur=[sub];groups.push(cur)}
+    }
+  }
+  const out=[],left=[];
+  for(const subs of groups){
+    const slots=blank(),src={};const A=[],B=[];let phase="A";
+    for(const sub of subs){
+      if(HOME.test(sub)){left.push([sub,"유치원에서 관찰한 내용이 아니라 넣지 않음"]);continue}
+      if(EVALS.some(w=>sub.includes(w))&&sub.length<30){left.push([sub,"평가하는 말이라 넣지 않음"]);continue}
+      let t=sub.replace(/[.。!?]+$/,"").trim();let m;
+      if((m=t.match(EARLY))){if(!slots.time1){slots.time1="학기 초에는";src.time1=m[0].trim()}t=t.slice(m[0].length).trim()}
+      else if((m=t.match(LATER))){if(slots.time1&&/요즘|최근|이제|지금|점점|2학기|[5-9]월|1[0-2]월/.test(m[1])){slots.time2="점차";src.time2=m[0].trim();phase="B"}t=t.slice(m[0].length).trim()}
+      if(!t)continue;
+      if(!slots.sup&&SUP.test(t)){slots.sup=t.replace(/^(내가|제가)\s*/,"교사가 ").replace(/(내가|제가)/,"교사가");src.sup=sub;continue}
+      t=unquote(t);
+      if(!slots.ctx&&phase==="A"){const cm=t.match(CTXRE),km=t.match(COMMACTX);
+        if(km){slots.ctx=km[1];src.ctx=sub;t=km[3]}
+        else if(cm&&CTXW.test(cm[1])){slots.ctx=cm[1];src.ctx=sub;t=cm[3]}}
+      (phase==="B"?B:A).push({t,sub});
+    }
+    if(A.length){slots.exp=A.map((x,i)=>i<A.length-1?conn(x.t):x.t).join(" ");src.exp=A.map(x=>x.sub).join(" ")}
+    if(B.length){slots.area=B.map((x,i)=>i<B.length-1?conn(x.t):x.t).join(" ");src.area=B.map(x=>x.sub).join(" ")}
+    const order=SLOTS.map(s=>s[0]).filter(k=>slots[k]);
+    if(!order.length||(!slots.exp&&!slots.area))continue;
+    const last=order[order.length-1];
+    /* 마지막이 아닌 블록은 다음 블록으로 이어지게 */
+    if(slots.exp&&last!=="exp")slots.exp=slots.time2?contrast(slots.exp):conn(slots.exp);
+    if(slots.sup&&last!=="sup")slots.sup=conn(slots.sup);
+    slots[last]=fixEnd(slots[last]);
+    const shape=slots.time1&&slots.time2?"변화형":slots.sup?"지원형":"장면형";
+    if(shape==="장면형"){slots.time1="";delete src.time1}
+    out.push(mk(shape,slots,src,{area:slots.area?"":"자동 나누기는 영역을 정하지 않음. 아래 렌즈 질문을 보고 근거가 있으면 채우기",human:"근거가 분명할 때만 채우기"}));
+  }
+  return {sents:out,left};
+}
+let autoTimer=null;
+function liveSplit(){
+  clearTimeout(autoTimer);
+  autoTimer=setTimeout(()=>{
+    if(!(C.auto||!C.sents.length))return;
+    const notes=(C.notes||"").trim();
+    if(!notes){if(C.auto){C.sents=[];C.leftover=[];save();renderSents()}return}
+    const r=autoSplit(notes);
+    C.sents=r.sents;C.leftover=r.left;C.auto=true;save();renderSents();
+  },500);
+}
+
+/* 완성 */
+function renderFinal(){
+  const text=C.sents.map(sentText).filter(Boolean).join(" ");
+  let html=esc(text);const bad=[],warn=[];
+  const forb=[...new Set(text.match(/[^가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z0-9\s.,·ㆍ]/g)||[])];
+  forb.forEach(ch=>{html=html.split(esc(ch)).join(`<mark>${esc(ch)}</mark>`)});
+  const nm=[...new Set(findNames(text))];nm.forEach(n=>{html=html.split(esc(n)).join(`<mark>${esc(n)}</mark>`)});
+  BRANDS.filter(b=>text.includes(b)).forEach(b=>{bad.push(b);html=html.split(b).join(`<mark>${b}</mark>`)});
+  EVALS.filter(w=>text.includes(w)).forEach(w=>{warn.push(w);html=html.split(w).join(`<mark class="w">${w}</mark>`)});
+  $("#finalText").innerHTML=html||'<span class="muted">블록을 채우면 여기에 문장이 이어집니다.</span>';
+  const n=text.length;$("#count").textContent=`${n} / 500자`;
+  const sents=C.sents.map(sentText).filter(Boolean);
+  const notEnd=sents.filter(s=>!endsNominal(s)).length;
+  const holes=C.sents.reduce((a,r)=>a+SHAPES[r.shape].core.filter(k=>!(r.slots[k]||"").trim()).length,0);
+  const miss=C.sents.reduce((a,r)=>a+SLOTS.filter(([k])=>srcState(r,k)==="missing").length,0);
+  const c=[];
+  if(n)c.push(n>500?`<span class="chip bad">${n-500}자 초과</span>`:`<span class="chip ok">500자 안</span>`);
+  if(sents.length)c.push(notEnd?`<span class="chip bad">~함. 으로 안 끝난 문장 ${notEnd}</span>`:`<span class="chip ok">명사형 종결</span>`);
+  if(n)c.push(forb.length?`<span class="chip bad">쓸 수 없는 부호 ${forb.map(esc).join(" ")}</span>`:`<span class="chip ok">부호 맞음</span>`);
+  if(nm.length)c.push(`<span class="chip bad">이름 ${nm.map(esc).join(", ")}</span>`);
+  if(bad.length)c.push(`<span class="chip bad">상표명 ${bad.join(", ")}</span>`);
+  if(warn.length)c.push(`<span class="chip warn">평가하는 말 ${warn.join(", ")}</span>`);
+  if(miss)c.push(`<span class="chip warn">원문 확인 ${miss}</span>`);
+  if(holes)c.push(`<span class="chip warn">빈 블록 ${holes}</span>`);
+  $("#chips").innerHTML=c.join("");
+  renderClassSoft();
+}
+/* 작성 표시 점만 가볍게 갱신 */
+function renderClassSoft(){const el=document.querySelector(`[data-kid="${C.id}"]`);if(el)el.classList.toggle("has",C.sents.some(r=>sentText(r)));
+  const p=document.querySelector("#classbar .progress");if(p)p.textContent=`작성 ${S.kids.filter(k=>k.sents.some(r=>sentText(r))).length} / ${S.kids.length}명`}
+$("#copyBtn").onclick=async()=>{
+  const t=C.sents.map(sentText).filter(Boolean).join(" ");if(!t)return;
+  try{await navigator.clipboard.writeText(t);$("#copied").hidden=false;setTimeout(()=>$("#copied").hidden=true,2000)}
+  catch(e){const f=$("#copyFallback");f.hidden=false;f.value=t;f.focus();f.select()}
+};
+
+$("#notes").addEventListener("input",e=>{C.notes=e.target.value;if(S.isExample)C.auto=true;unEx();save();nameCheck();C.sents.forEach(updateWarn);renderFinal();liveSplit()});
+function resetAll(){Object.assign(C,{notes:"",sents:[],leftover:[],auto:true});S.isExample=false;save();renderAll();$("#notes").focus()}
+/* 예시 지우기: 반 전체를 빈 3명으로 */
+$("#clearAll").onclick=()=>{const k=newKid(1);S={age:S.age,isExample:false,kids:[k,newKid(2),newKid(3)],cur:k.id};C=k;save();renderAll();$("#notes").focus()};
+/* 실수로 지우지 않도록 두 번 눌러야 지워짐 */
+let resetTimer=null;
+$("#resetBtn").onclick=()=>{
+  const b=$("#resetBtn");
+  if(!(C.notes||"").trim()&&!C.sents.length){$("#notes").focus();return}
+  if(b.dataset.armed){clearTimeout(resetTimer);delete b.dataset.armed;b.textContent="지우고 새로 쓰기";b.style.borderColor="";b.style.color="";resetAll();return}
+  b.dataset.armed="1";b.textContent=`한 번 더 누르면 ${C.no}번의 초고와 블록이 지워집니다`;b.style.borderColor="var(--bad)";b.style.color="var(--bad)";
+  resetTimer=setTimeout(()=>{delete b.dataset.armed;b.textContent="지우고 새로 쓰기";b.style.borderColor="";b.style.color=""},4000);
+};
+
+/* Claude */
+let sampleFn=null,ctl=null;
+const DENY=["not_granted","sampling_disabled","not_declared","capability_disabled"];
+function errCopy(c){
+  if(DENY.includes(c))return "Claude 사용이 허용되지 않았습니다. 블록은 직접 채울 수 있습니다.";
+  if(c==="rate_limited")return "잠시 뒤에 다시 눌러 주세요.";
+  if(c==="session_expired")return "다시 로그인한 뒤 눌러 주세요.";
+  if(c==="invalid_json")return "블록으로 나누지 못했습니다. 한 번 더 눌러 주세요.";
+  if(c==="prompt_too_large")return "메모가 너무 깁니다. 나누어 넣어 주세요.";
+  return "연결이 끊겼습니다. 다시 눌러 주세요.";
+}
+function hideAi(){sampleFn=null;$("#aiPlace").disabled=true;$("#noAi").hidden=false;document.querySelectorAll("[data-polish]").forEach(b=>b.hidden=true)}
+const BLOCKS=`[블록 순서] 이 순서대로 공백으로 이으면 한 문장이 된다.
+time1(시간): 학기 초에는. 변화형에서만
+ctx(놀이·일상): 어떤 놀이, 일상생활, 활동에서
+exp(유아 경험): 유아의 구체적 행동, 말, 표정. 말은 따옴표 없이 간접 표현으로
+sup(교사 지원): 교사의 도움을 받아. 메모에 교사의 도움이 있을 때만
+time2(시간): 점차. 변화형에서만
+dev(발달 특성): 연령 발달과 관련된 능력. 근거 있을 때만
+area(5개 영역): 5개 영역 내용과 이어지는 표현. 경험이 그 내용을 실제로 보여 줄 때만
+poss(변화 가능성): 나아가는 방향. 근거 있을 때만
+human(인간상): 추구하는 인간상과 이어지는 맺음. 메모가 분명히 뒷받침할 때만
+
+[문장 모양] 문장마다 하나를 고른다.
+장면형: 한 장면에서 드러난 모습. 기본 블록 ctx, exp
+변화형: 메모에 시기가 다른 두 모습이 있을 때만. 기본 블록 time1, ctx, exp, time2
+지원형: 메모에 교사의 도움이 있을 때만. 기본 블록 ctx, exp, sup`;
+const RULES=`[원칙]
+- 메모에 없는 행동, 능력, 성향은 만들지 않는다. 부풀리지 않는다.
+- 근거가 없는 블록은 ""로 둔다. 5개 영역과 인간상도 근거가 약하면 비운다. 비운 블록은 why에 이유를 짧게 쓴다.
+- 채운 블록마다 src에 그 근거가 된 메모 구절을 메모에 있는 그대로 복사한다(바꾸지 말 것).
+- 블록을 이었을 때 문법에 맞게 조사와 어미를 맞춘다. 마지막으로 채운 블록만 명사형 어미(~함, ~임, ~음)와 마침표로 끝낸다.
+- 마침표, 쉼표, 가운뎃점 외 부호 금지. 이름, 상표명, 평가하는 말(착하다, 똑똑하다, 뛰어나다), 교사의 추측(~것 같다) 금지.
+- 한 유아의 문장들이 모두 같은 모양으로 시작하지 않도록 맥락과 경험의 표현을 다양하게 쓴다.`;
+
+let aiTimer=null;
+function disarmAi(){const b=$("#aiPlace");clearTimeout(aiTimer);delete b.dataset.armed;b.textContent="AI로 다듬고 채우기";b.style.background="";b.style.borderColor=""}
+$("#aiPlace").onclick=async()=>{
+  if(!sampleFn)return;const notes=(C.notes||"").trim();if(!notes){$("#notes").focus();return}
+  if(!nameCheck())return;
+  const b=$("#aiPlace");
+  /* 교사가 손댄 블록이 있으면 한 번 더 물음 */
+  if(!C.auto&&C.sents.some(r=>sentText(r))&&!b.dataset.armed){
+    b.dataset.armed="1";b.textContent="한 번 더 누르면 지금 블록을 AI 결과로 바꿉니다";b.style.background="var(--bad)";b.style.borderColor="var(--bad)";
+    aiTimer=setTimeout(disarmAi,4000);return;
+  }
+  disarmAi();
+  const prompt=`유치원 교사가 만 ${S.age}세 유아에 대해 막 쓴 메모를 생활기록부 유아발달상황 문장 블록으로 나눈다.
+
+${NURI}
+
+${BLOCKS}
+
+${RULES}
+- 메모를 주제별로 묶어 4~6문장. 전체 480자 이내.
+- 메모 중 문장에 넣지 않은 것(평가하는 말, 가정에서 들은 말, 추측)은 leftover에 [원문, 이유]로.
+
+[메모]
+${notes}
+
+JSON 하나로만 답한다. slots와 src에는 아홉 블록 키를 모두 적고 비운 블록은 "".
+{"sentences":[{"shape":"장면형","slots":{"time1":"","ctx":"","exp":"","sup":"","time2":"","dev":"","area":"","poss":"","human":""},"src":{"ctx":"메모 원문 구절"},"why":{"human":"근거가 부족함"}}],"leftover":[["원문","이유"]]}`;
+  $("#stPlace").hidden=false;$("#err").hidden=true;$("#aiPlace").disabled=true;ctl=new AbortController();
+  try{
+    const out=await sampleFn.json(prompt,{signal:ctl.signal,cache:false});
+    const ss=out&&Array.isArray(out.sentences)?out.sentences:[];if(!ss.length)throw {code:"invalid_json"};
+    C.sents=ss.map(x=>{
+      const sl=Object.fromEntries(SLOTS.map(([k])=>[k,String((x.slots||{})[k]||"")]));
+      const src={};SLOTS.forEach(([k])=>{if(sl[k].trim())src[k]=String((x.src||{})[k]||"")});
+      const why={};Object.entries(x.why||{}).forEach(([k,v])=>{if(NAME[k]&&v)why[k]=String(v)});
+      return mk(x.shape,sl,src,why);
+    });
+    C.leftover=Array.isArray(out.leftover)?out.leftover.filter(a=>Array.isArray(a)&&a[0]).map(a=>[String(a[0]),String(a[1]||"")]):[];
+    C.auto=false;unEx();save();renderSents();
+  }catch(e){if(e&&e.code!=="cancelled"){$("#err").hidden=false;$("#err").textContent=errCopy(e.code)}if(e&&DENY.includes(e.code))hideAi()}
+  finally{$("#stPlace").hidden=true;if(sampleFn)$("#aiPlace").disabled=false}
+};
+$("#stop").onclick=()=>ctl&&ctl.abort();
+
+async function polish(r,btn){
+  if(!sampleFn||!sentText(r))return;
+  if(findNames(sentText(r)).length)return;
+  const prompt=`유치원 생활기록부 문장을 블록으로 나눈 것이다(문장 모양: ${r.shape}). 블록을 이었을 때 자연스러운 한 문장이 되도록 조사, 어미, 연결어만 고친다. 내용은 더하거나 빼지 않는다. 빈 블록은 ""로 둔다.
+
+${BLOCKS}
+
+${RULES}
+
+[지금 블록]
+${SLOTS.map(([key])=>`${key}: ${r.slots[key]||""}`).join("\n")}
+
+JSON 하나로만 답한다.
+{"time1":"","ctx":"","exp":"","sup":"","time2":"","dev":"","area":"","poss":"","human":""}`;
+  btn.disabled=true;btn.textContent="잇는 중…";
+  try{const out=await sampleFn.json(prompt,{cache:false});SLOTS.forEach(([key])=>{if(out&&typeof out[key]==="string"&&((r.slots[key]||"").trim()||out[key].trim().length<12))r.slots[key]=out[key]});C.auto=false;unEx();save();renderSents()}
+  catch(e){if(e&&DENY.includes(e.code))hideAi();btn.disabled=false;btn.textContent="자연스럽게 잇기"}
+}
+
+/* ── 우리 반 ── */
+let minusTimer=null;
+function renderClass(){
+  const done=S.kids.filter(k=>k.sents.some(r=>sentText(r))).length;
+  $("#classbar").innerHTML=`<span class="lbl">우리 반</span>`+
+    S.kids.map(k=>`<button type="button" class="kid${k.sents.some(r=>sentText(r))?" has":""}" data-kid="${k.id}" aria-current="${k.id===C.id}" title="${k.no}번${k.sents.length?" (작성 중)":""}">${k.no}번</button>`).join("")+
+    `<button type="button" class="kidbtn" id="addKid" aria-label="아이 더하기" title="아이 더하기">+</button>`+
+    `<button type="button" class="kidbtn" id="delKid" aria-label="${C.no}번 빼기" title="${C.no}번 빼기">−</button>`+
+    `<span class="spacer"></span><span class="progress">작성 ${done} / ${S.kids.length}명</span>`;
+}
+function switchKid(id){const k=S.kids.find(x=>x.id===id);if(!k)return;disarmAi();C=k;S.cur=k.id;save();renderAll()}
+$("#classbar").addEventListener("click",e=>{
+  const kb=e.target.closest("[data-kid]");if(kb){switchKid(kb.dataset.kid);return}
+  if(e.target.id==="addKid"){
+    const n=Math.max(0,...S.kids.map(k=>Number(k.no)||0))+1;const k=newKid(n);S.kids.push(k);switchKid(k.id);$("#notes").focus();return}
+  if(e.target.id==="delKid"){
+    const b=e.target;
+    if(S.kids.length<=1){b.textContent="한 명은 남아야 합니다";b.classList.add("armed");setTimeout(renderClass,2000);return}
+    const has=(C.notes||"").trim()||C.sents.length;
+    if(has&&!b.dataset.armed){b.dataset.armed="1";b.classList.add("armed");b.textContent=`한 번 더 누르면 ${C.no}번과 쓴 내용이 빠집니다`;clearTimeout(minusTimer);minusTimer=setTimeout(renderClass,4000);return}
+    clearTimeout(minusTimer);const i=S.kids.findIndex(k=>k.id===C.id);S.kids.splice(i,1);
+    const next=S.kids[Math.min(i,S.kids.length-1)];switchKid(next.id);return}
+});
+
+function renderAll(){renderAge();renderClass();$("#notes").value=C.notes||"";$("#exNote").hidden=!S.isExample;nameCheck();renderSents()}
+renderAll();
+
+})();
+</script>
+
+</body>
+</html>
