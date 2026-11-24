@@ -153,9 +153,6 @@ footer{color:var(--muted);font-size:.8rem;border-top:1px solid var(--line);paddi
       <h1>유아발달상황 작성 도우미</h1>
       <p>초고를 쓰면 문장구성 블록으로 나눠 줍니다. 블록을 누르면 메모 원문이 보이고, 빈 블록만 채우면 문장이 완성됩니다.</p>
     </div>
-    <div class="seg" id="ageSeg" role="group" aria-label="연령">
-      <button type="button" data-age="3">만 3세</button><button type="button" data-age="4">만 4세</button><button type="button" data-age="5">만 5세</button>
-    </div>
   </header>
 
   <div class="classbar" id="classbar" aria-label="우리 반"></div>
@@ -337,8 +334,6 @@ const norm=s=>String(s||"").replace(/["'“”‘’\s.,·]/g,"");
 $("#humAll").innerHTML=HUMANS.map(h=>`<li><b>${h.name}</b><span>${h.desc}</span><em>${h.keys}</em></li>`).join("");
 $("#palette").innerHTML=PALETTE.map(([k,n])=>`<span class="k-${k}">${n}</span>`).join("");
 function unEx(){if(S.isExample){S.isExample=false;$("#exNote").hidden=true}}
-function renderAge(){document.querySelectorAll("#ageSeg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.age===S.age))}
-$("#ageSeg").onclick=e=>{const b=e.target.closest("button");if(b){S.age=b.dataset.age;save();renderAge()}};
 
 /* 이름 점검 (저장하지 않음) */
 const names=()=>[]; /* 이름 점검 칸은 뺐음 */
@@ -753,7 +748,7 @@ $("#aiPlace").onclick=async()=>{
     aiTimer=setTimeout(disarmAi,4000);return;
   }
   disarmAi();
-  const prompt=`유치원 교사가 만 ${S.age}세 유아에 대해 막 쓴 메모를 생활기록부 유아발달상황 문장 블록으로 나눈다.
+  const prompt=`유치원 교사가 한 유아에 대해 막 쓴 메모를 생활기록부 유아발달상황 문장 블록으로 나눈다.
 
 ${NURI}
 
@@ -871,7 +866,7 @@ $("#wipeBtn").onclick=()=>{
   wipeTimer=setTimeout(()=>{delete b.dataset.armed;b.textContent="이 브라우저에서 모두 지우기";b.style.color=""},4000);
 };
 
-function renderAll(){renderAge();renderClass();$("#notes").value=C.notes||"";$("#exNote").hidden=!S.isExample;nameCheck();renderSents()}
+function renderAll(){renderClass();$("#notes").value=C.notes||"";$("#exNote").hidden=!S.isExample;nameCheck();renderSents()}
 renderAll();
 
 (async()=>{try{if(window.claude&&window.claude.use)dl=await window.claude.use("downloads")}catch(e){}})();
