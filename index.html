@@ -75,6 +75,10 @@ textarea{width:100%;resize:vertical;font-size:1rem}
 .kidbtn{min-width:2.2em;height:2.2em;border:1.5px dashed var(--line);border-radius:8px;background:transparent;color:var(--muted);font:inherit;font-size:1rem;font-weight:600;cursor:pointer;padding:0 8px}
 .kidbtn:hover{border-color:var(--accent);color:var(--accent)}
 .kidbtn.armed{border-style:solid;border-color:var(--bad);color:var(--bad);font-size:.82rem;font-weight:500}
+.databar{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;font-size:.86rem;margin-top:-16px;padding:0 4px}
+.databar .lbl{color:var(--muted);margin-right:2px}
+.databar .btn.ghost{padding:4px 8px}
+.dataMsg{color:var(--ok)}
 .progress{font-size:.84rem;color:var(--muted);font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 .palette{display:flex;flex-wrap:wrap;gap:6px}
 .palette span{font-size:.78rem;font-weight:600;color:var(--k-ink);background:var(--kc);border-radius:6px;padding:2px 9px}
@@ -155,6 +159,15 @@ footer{color:var(--muted);font-size:.8rem;border-top:1px solid var(--line);paddi
   </header>
 
   <div class="classbar" id="classbar" aria-label="우리 반"></div>
+  <div class="databar">
+    <span class="lbl">우리 반 기록</span>
+    <button type="button" class="btn ghost" id="exportBtn">파일로 저장</button>
+    <button type="button" class="btn ghost" id="importBtn">파일 불러오기</button>
+    <input type="file" id="importFile" accept=".json,application/json" hidden>
+    <button type="button" class="btn ghost" id="wipeBtn">이 브라우저에서 모두 지우기</button>
+    <span class="dataMsg" id="dataMsg" role="status"></span>
+  </div>
+  <div class="note warn" id="importConfirm" hidden><span id="importText"></span><button type="button" class="btn" id="importYes">불러오기</button><button type="button" class="btn ghost" id="importNo">취소</button></div>
 
   <section>
     <h2><span class="step">1</span>초고 쓰기</h2>
@@ -815,9 +828,53 @@ $("#classbar").addEventListener("click",e=>{
     const next=S.kids[Math.min(i,S.kids.length-1)];switchKid(next.id);return}
 });
 
+/* ── 우리 반 기록 파일: 선생님 컴퓨터로만 저장되고, 불러올 때도 어디로도 보내지 않음 ── */
+let dl=null,pendingImport=null,wipeTimer=null,msgTimer=null;
+function dataMsg(t){$("#dataMsg").textContent=t;clearTimeout(msgTimer);msgTimer=setTimeout(()=>$("#dataMsg").textContent="",5000)}
+function stampName(){const d=new Date(),z=n=>String(n).padStart(2,"0");return `${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}`}
+$("#exportBtn").onclick=async()=>{
+  const data=JSON.stringify({app:"kid-dev-writer",version:1,savedAt:new Date().toISOString(),state:S},null,1);
+  const filename=`kid-dev-writer_${stampName()}.json`; /* 학교 PC에서 이름이 깨지지 않게 영문 */
+  if(dl){try{await dl.save({filename,data});dataMsg("저장했습니다")}catch(e){dataMsg(e&&e.code==="declined"?"저장을 취소했습니다":"이 화면에서는 파일로 저장할 수 없습니다")}return}
+  try{const url=URL.createObjectURL(new Blob([data],{type:"application/json"}));const a=document.createElement("a");a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),3000);dataMsg("저장했습니다. 내려받기 폴더를 확인하세요")}
+  catch(e){dataMsg("파일로 저장하지 못했습니다")}
+};
+$("#importBtn").onclick=()=>$("#importFile").click();
+$("#importFile").addEventListener("change",e=>{
+  const f=e.target.files&&e.target.files[0];e.target.value="";if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{const o=JSON.parse(rd.result);
+      if(!o||o.app!=="kid-dev-writer"||!o.state||!Array.isArray(o.state.kids)||!o.state.kids.length)throw 0;
+      pendingImport=o.state;
+      const has=!S.isExample&&S.kids.some(k=>(k.notes||"").trim()||k.sents.length);
+      if(has){$("#importText").textContent=`불러오면 지금 이 브라우저의 우리 반 기록이 파일 내용(아이 ${pendingImport.kids.length}명)으로 바뀝니다.`;$("#importConfirm").hidden=false}
+      else applyImport();
+    }catch(err){$("#err").hidden=false;$("#err").textContent="유아발달상황 작성 도우미에서 저장한 파일이 아닙니다."}
+  };
+  rd.readAsText(f);
+});
+function applyImport(){
+  if(!pendingImport)return;S=pendingImport;pendingImport=null;S.isExample=false;
+  S.kids.forEach(k=>{k.notes=k.notes||"";k.leftover=k.leftover||[];k.sents=(k.sents||[]).map(r=>Object.assign({src:{},why:{},extra:[]},r))});
+  C=S.kids.find(k=>k.id===S.cur)||S.kids[0];S.cur=C.id;
+  save();renderAll();$("#importConfirm").hidden=true;$("#err").hidden=true;dataMsg(`불러왔습니다 · 아이 ${S.kids.length}명`);
+}
+$("#importYes").onclick=applyImport;
+$("#importNo").onclick=()=>{pendingImport=null;$("#importConfirm").hidden=true};
+$("#wipeBtn").onclick=()=>{
+  const b=$("#wipeBtn");
+  if(b.dataset.armed){clearTimeout(wipeTimer);delete b.dataset.armed;b.textContent="이 브라우저에서 모두 지우기";b.style.color="";
+    try{localStorage.removeItem(KEY);localStorage.removeItem(OLDKEY)}catch(e){}
+    const k=newKid(1);S={age:S.age,isExample:false,kids:[k,newKid(2),newKid(3)],cur:k.id};C=k;save();renderAll();dataMsg("이 브라우저에서 모두 지웠습니다");return}
+  b.dataset.armed="1";b.textContent="한 번 더 누르면 우리 반 전체가 지워집니다";b.style.color="var(--bad)";
+  wipeTimer=setTimeout(()=>{delete b.dataset.armed;b.textContent="이 브라우저에서 모두 지우기";b.style.color=""},4000);
+};
+
 function renderAll(){renderAge();renderClass();$("#notes").value=C.notes||"";$("#exNote").hidden=!S.isExample;nameCheck();renderSents()}
 renderAll();
 
+(async()=>{try{if(window.claude&&window.claude.use)dl=await window.claude.use("downloads")}catch(e){}})();
 })();
 </script>
 
