@@ -90,6 +90,10 @@ textarea{width:100%;resize:vertical;font-size:1rem}
 .blk::after{content:"";position:absolute;right:-5px;top:50%;width:10px;height:10px;margin-top:-5px;border-radius:50%;background:var(--kc)}
 .blk:last-child::after{display:none}
 .blk .tag{font-size:.66rem;font-weight:700;opacity:.85;letter-spacing:.02em;line-height:1.4;user-select:none;display:flex;gap:6px;align-items:center}
+.blk .mv{display:inline-flex;gap:2px;margin-left:2px}
+.blk .mv button{border:0;background:rgba(255,255,255,.22);color:inherit;font:inherit;font-size:.8rem;line-height:1;width:18px;height:16px;border-radius:4px;cursor:pointer;padding:0}
+.blk .mv button:hover{background:rgba(255,255,255,.4)}
+.blk.hole .mv button{background:color-mix(in srgb,var(--kc) 15%,transparent)}
 .blk .tag .flag{background:var(--bad-bg);color:var(--bad);border-radius:4px;padding:0 4px;font-size:.62rem}
 .blk .txt{font-size:.98rem;font-weight:500;line-height:1.5;outline:none;min-width:3em;overflow-wrap:anywhere}
 .blk .txt:empty::before{content:attr(data-ph);opacity:.75;font-weight:400}
@@ -225,6 +229,11 @@ const NURI=`[5개 영역 내용]
 [추구하는 인간상] 건강한 사람, 자주적인 사람, 창의적인 사람, 감성이 풍부한 사람, 더불어 사는 사람`;
 const uid=()=>Math.random().toString(36).slice(2,9);
 const blank=()=>Object.fromEntries(SLOTS.map(s=>[s[0],""]));
+/* 블록 순서: 지원형은 교사 지원이 유아 경험 앞에 옴. 교사가 ‹ › 로 옮기면 r.order 에 저장 */
+const KEYS=SLOTS.map(s=>s[0]);
+const SLOT=Object.fromEntries(SLOTS.map(s=>[s[0],s]));
+const defaultOrder=shape=>shape==="지원형"?["time1","ctx","sup","exp","time2","dev","area","poss","human"]:KEYS.slice();
+const getOrder=r=>(Array.isArray(r.order)&&r.order.length===KEYS.length)?r.order:defaultOrder(r.shape);
 const mk=(shape,slots,src,why)=>({id:uid(),shape:SHAPES[shape]?shape:"장면형",slots:Object.assign(blank(),slots||{}),src:src||{},why:why||{},extra:[]});
 
 const newKid=n=>({id:uid(),no:n,notes:"",sents:[],leftover:[],auto:true});
@@ -293,9 +302,11 @@ function srcState(r,key){
 const isCore=(r,key)=>SHAPES[r.shape].core.includes(key);
 const shown=(r,key)=>isCore(r,key)||(r.slots[key]||"").trim()||r.extra.includes(key);
 function sentHTML(r){
-  const blocks=SLOTS.filter(([key])=>shown(r,key)).map(([key,k,name,ph])=>{
+  const vis=getOrder(r).filter(key=>shown(r,key));
+  const blocks=vis.map((key,vi)=>{const [,k,name,ph]=SLOT[key];
     const v=r.slots[key]||"";const st=srcState(r,key);
-    return `<span class="blk k-${k}${v.trim()?"":" hole"}"><span class="tag">${name}${st==="missing"?'<span class="flag">원문 확인</span>':""}</span><span class="txt" contenteditable="true" spellcheck="false" role="textbox" aria-label="${name}" data-slot="${key}" data-ph="${esc(ph)}">${esc(v)}</span></span>`}).join("");
+    const mv=`<span class="mv">${vi>0?`<button type="button" data-mv="-1" data-key="${key}" aria-label="${name} 앞으로">‹</button>`:""}${vi<vis.length-1?`<button type="button" data-mv="1" data-key="${key}" aria-label="${name} 뒤로">›</button>`:""}</span>`;
+    return `<span class="blk k-${k}${v.trim()?"":" hole"}"><span class="tag">${name}${st==="missing"?'<span class="flag">원문 확인</span>':""}${mv}</span><span class="txt" contenteditable="true" spellcheck="false" role="textbox" aria-label="${name}" data-slot="${key}" data-ph="${esc(ph)}">${esc(v)}</span></span>`}).join("");
   const missing=SLOTS.filter(([key])=>!shown(r,key));
   const nob=SLOTS.filter(([key])=>!shown(r,key)&&r.why[key]).map(([key])=>`${NAME[key]}: ${esc(r.why[key])}`);
   return `<div class="sent" data-sid="${r.id}">
@@ -311,6 +322,7 @@ function sentHTML(r){
     <div class="sent-foot">
       ${missing.length?`<div class="addbar">${missing.map(([key,k,name])=>`<button type="button" class="add k-${k}" data-add="${key}">+ ${name}</button>`).join("")}</div>`:""}
       <span class="spacer"></span>
+      ${r.order?`<button type="button" class="btn ghost" data-resetorder>순서 처음대로</button>`:""}
       <span class="warnTxt" data-w></span>
     </div>
     ${nob.length?`<div class="nobasis">근거가 없어 비워 둔 블록 · ${nob.join(" · ")}</div>`:""}
@@ -324,7 +336,7 @@ function renderSents(){
   $("#leftover").innerHTML=`<span>문장에 넣지 않은 메모</span>`+lo.map(([t,r])=>`<span><b>${esc(t)}</b> · ${esc(r)}</span>`).join("");
   renderFinal();
 }
-const sentText=r=>SLOTS.map(([key])=>(r.slots[key]||"").trim()).filter(Boolean).join(" ").replace(/\s+/g," ");
+const sentText=r=>getOrder(r).map(key=>(r.slots[key]||"").trim()).filter(Boolean).join(" ").replace(/\s+/g," ");
 function endsNominal(s){
   s=s.trim();if(!s.endsWith("."))return false;
   const body=s.slice(0,-1).trim();const c=body.slice(-1).charCodeAt(0);
@@ -362,8 +374,15 @@ $("#sentences").addEventListener("keydown",e=>{if(e.target.matches("[data-slot]"
 $("#sentences").addEventListener("paste",e=>{if(!e.target.closest("[data-slot]"))return;e.preventDefault();const t=(e.clipboardData||window.clipboardData).getData("text").replace(/\s+/g," ");document.execCommand("insertText",false,t)});
 $("#sentences").addEventListener("click",e=>{
   const s=e.target.closest("[data-sid]");if(!s)return;const i=C.sents.findIndex(x=>x.id===s.dataset.sid);const r=C.sents[i];
-  const blk=e.target.closest(".blk");if(blk&&!e.target.matches("[data-slot]")){blk.querySelector("[data-slot]").focus();return}
+  const blk=e.target.closest(".blk");if(blk&&!e.target.matches("[data-slot]")&&!e.target.closest("[data-mv]")){blk.querySelector("[data-slot]").focus();return}
   const sh=e.target.closest("[data-shape]");if(sh){r.shape=sh.dataset.shape;C.auto=false;unEx();save();renderSents();return}
+  const mvb=e.target.closest("[data-mv]");if(mvb){
+    const key=mvb.dataset.key,dir=Number(mvb.dataset.mv),ord=getOrder(r).slice();
+    const vis=ord.filter(k=>shown(r,k)),vi=vis.indexOf(key),other=vis[vi+dir];
+    if(other){const a=ord.indexOf(key),b=ord.indexOf(other);[ord[a],ord[b]]=[ord[b],ord[a]];r.order=ord;C.auto=false;unEx();save();renderSents();
+      const f=document.querySelector(`[data-sid="${r.id}"] [data-mv="${dir}"][data-key="${key}"]`)||document.querySelector(`[data-sid="${r.id}"] [data-key="${key}"]`);f&&f.focus()}
+    return}
+  if(e.target.matches("[data-resetorder]")){delete r.order;C.auto=false;save();renderSents();return}
   if(e.target.dataset.add){r.extra.push(e.target.dataset.add);C.auto=false;unEx();save();renderSents();const n=document.querySelector(`[data-sid="${r.id}"] [data-slot="${e.target.dataset.add}"]`);n&&n.focus();return}
   if(e.target.matches("[data-del]")){C.sents.splice(i,1);C.auto=false;unEx();save();renderSents();return}
   if(e.target.matches("[data-polish]"))polish(r,e.target);
@@ -427,7 +446,8 @@ function stem(s){
   if(c>=0xAC00&&c<=0xD7A3&&(c-0xAC00)%28===16)return s.slice(0,-1)+String.fromCharCode(c-16);
   return null;
 }
-const conn=s=>{const t=stem(s);return t?t+"고":nominal(s)+"며"};
+const LINKED=/(다가|면서|으며|하며|하고|하자|는데|으나|지만|도록|려고|어서|아서|해서|니까|[고며자서면니])$/;
+const conn=s=>{const n=nominal(s);if(LINKED.test(n)&&!/[함음임]$/.test(n))return n;const t=stem(s);return t?t+"고":n+"며"};
 const contrast=s=>{const t=stem(s);return t?t+"곤 하였으나":nominal(s)+"였으나"};
 /* 아이가 한 말을 간접 표현으로: 해→하라고, 그래→그렇다고, ~다→~다고, ~자→~자고 */
 function indirect(q){
@@ -459,7 +479,7 @@ function autoSplit(notes){
   }
   const out=[],left=[];
   for(const subs of groups){
-    const slots=blank(),src={};const A=[],B=[];let phase="A";
+    const slots=blank(),src={};const A=[],B=[];let phase="A";let supFirst=null;
     for(const sub of subs){
       if(HOME.test(sub)){left.push([sub,"유치원에서 관찰한 내용이 아니라 넣지 않음"]);continue}
       if(EVALS.some(w=>sub.includes(w))&&sub.length<30){left.push([sub,"평가하는 말이라 넣지 않음"]);continue}
@@ -467,7 +487,16 @@ function autoSplit(notes){
       if((m=t.match(EARLY))){if(!slots.time1){slots.time1="학기 초에는";src.time1=m[0].trim()}t=t.slice(m[0].length).trim()}
       else if((m=t.match(LATER))){if(slots.time1&&/요즘|최근|이제|지금|점점|2학기|[5-9]월|1[0-2]월/.test(m[1])){slots.time2="점차";src.time2=m[0].trim();phase="B"}t=t.slice(m[0].length).trim()}
       if(!t)continue;
-      if(!slots.sup&&SUP.test(t)){slots.sup=t.replace(/^(내가|제가)\s*/,"교사가 ").replace(/(내가|제가)/,"교사가");src.sup=sub;continue}
+      if(!slots.sup&&SUP.test(t)){
+        const at=t.search(/(교사|선생님|내가|제가)/);
+        const pre=at>0?t.slice(0,at).trim():"";
+        slots.sup=t.slice(Math.max(at,0)).replace(/^(내가|제가)\s*/,"교사가 ").replace(/(내가|제가)/,"교사가");src.sup=sub;
+        if(supFirst===null)supFirst=!(A.length||pre);
+        if(!pre){
+          const cut=slots.sup.match(/^(.+?(?:주자|주고|주며|주니|준 뒤|준 후|받아|받고|받은 뒤|한 뒤|한 후|하자|해 보고|보여 주자))\s+(.+)$/);
+          if(cut){slots.sup=cut[1];t=cut[2]}else continue;
+        }else t=pre;
+      }
       t=unquote(t);
       if(!slots.ctx&&phase==="A"){const cm=t.match(CTXRE),km=t.match(COMMACTX);
         if(km){slots.ctx=km[1];src.ctx=sub;t=km[3]}
@@ -476,16 +505,22 @@ function autoSplit(notes){
     }
     if(A.length){slots.exp=A.map((x,i)=>i<A.length-1?conn(x.t):x.t).join(" ");src.exp=A.map(x=>x.sub).join(" ")}
     if(B.length){slots.area=B.map((x,i)=>i<B.length-1?conn(x.t):x.t).join(" ");src.area=B.map(x=>x.sub).join(" ")}
-    const order=SLOTS.map(s=>s[0]).filter(k=>slots[k]);
+    if(!slots.exp&&!slots.area&&slots.sup){slots.exp=slots.sup;src.exp=src.sup;slots.sup="";delete src.sup}
+    const shape0=slots.time1&&slots.time2?"변화형":slots.sup?"지원형":"장면형";
+    /* 지원형이라도 초고에서 교사 도움이 아이 행동 뒤에 쓰였으면 그 순서를 따름 */
+    const ord0=shape0==="지원형"&&supFirst===false?KEYS.slice():defaultOrder(shape0);
+    const order=ord0.filter(k=>slots[k]);
     if(!order.length||(!slots.exp&&!slots.area))continue;
     const last=order[order.length-1];
     /* 마지막이 아닌 블록은 다음 블록으로 이어지게 */
     if(slots.exp&&last!=="exp")slots.exp=slots.time2?contrast(slots.exp):conn(slots.exp);
     if(slots.sup&&last!=="sup")slots.sup=conn(slots.sup);
     slots[last]=fixEnd(slots[last]);
-    const shape=slots.time1&&slots.time2?"변화형":slots.sup?"지원형":"장면형";
+    const shape=shape0;
     if(shape==="장면형"){slots.time1="";delete src.time1}
-    out.push(mk(shape,slots,src,{area:slots.area?"":"자동 나누기는 영역을 정하지 않음. 아래 렌즈 질문을 보고 근거가 있으면 채우기",human:"근거가 분명할 때만 채우기"}));
+    const made=mk(shape,slots,src,{area:slots.area?"":"자동 나누기는 영역을 정하지 않음. 아래 렌즈 질문을 보고 근거가 있으면 채우기",human:"근거가 분명할 때만 채우기"});
+    if(shape==="지원형"&&supFirst===false)made.order=KEYS.slice();
+    out.push(made);
   }
   return {sents:out,left};
 }
@@ -512,7 +547,7 @@ function cleanText(t){
 /* 한 블록 안의 문장들도 끝말을 맞춤 */
 function fixInner(t){return t.split(/(?<=\.)\s+/).map((x,i,a)=>i<a.length-1?fixEnd(x):x).join(" ")}
 function refineSentence(r){
-  const keys=SLOTS.map(x=>x[0]).filter(k=>(r.slots[k]||"").trim());
+  const keys=getOrder(r).filter(k=>(r.slots[k]||"").trim());
   keys.forEach((k,idx)=>{
     let t=fixInner(cleanText(r.slots[k]));
     if(idx===keys.length-1)t=fixEnd(t);
@@ -608,7 +643,7 @@ human(인간상): 추구하는 인간상과 이어지는 맺음. 메모가 분�
 [문장 모양] 문장마다 하나를 고른다.
 장면형: 한 장면에서 드러난 모습. 기본 블록 ctx, exp
 변화형: 메모에 시기가 다른 두 모습이 있을 때만. 기본 블록 time1, ctx, exp, time2
-지원형: 메모에 교사의 도움이 있을 때만. 기본 블록 ctx, exp, sup`;
+지원형: 메모에 교사의 도움이 있을 때만. 기본 블록 ctx, exp, sup. 지원형은 sup이 exp 앞에 와서 time1 ctx sup exp time2 dev area poss human 순서로 이어진다`;
 const RULES=`[원칙]
 - 메모에 없는 행동, 능력, 성향은 만들지 않는다. 부풀리지 않는다.
 - 근거가 없는 블록은 ""로 둔다. 5개 영역과 인간상도 근거가 약하면 비운다. 비운 블록은 why에 이유를 짧게 쓴다.
@@ -670,8 +705,8 @@ ${BLOCKS}
 
 ${RULES}
 
-[지금 블록]
-${SLOTS.map(([key])=>`${key}: ${r.slots[key]||""}`).join("\n")}
+[지금 블록] 이 순서대로 이어진다.
+${getOrder(r).map(key=>`${key}: ${r.slots[key]||""}`).join("\n")}
 
 JSON 하나로만 답한다.
 {"time1":"","ctx":"","exp":"","sup":"","time2":"","dev":"","area":"","poss":"","human":""}`;
